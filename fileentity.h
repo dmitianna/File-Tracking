@@ -15,10 +15,11 @@ public:
     bool exists() const { return m_exists; }
     qint64 size() const { return m_fileSize; }
 
+    void checkForChanges();
 signals:
     void fileCreated(const QString &path, qint64 size);
     void fileModified(const QString &path, qint64 size);
-    void fileDeleted(const QString &path);
+    void fileNotExists(const QString &path);
 
 private:
     QString m_filePath;
