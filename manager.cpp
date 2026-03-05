@@ -1,97 +1,151 @@
-#include <QCoreApplication>
-#include <QTextStream>
-#include <QThread>
 #include "manager.h"
 #include "logger.h"
+#include <QDebug>
 
-int main(int argc, char *argv[])
+FileManager::FileManager(QObject *parent)
+    : QObject(parent)
 {
-    QCoreApplication app(argc, argv);
+    Logger::instance().logInfo("FileManager created");
+}
 
-    QTextStream cin(stdin);
-    QTextStream cout(stdout);
+FileManager::~FileManager()
+{
+    QMutexLocker locker(&m_mutex);
 
-    Logger::instance().logInfo("Program started");
-
-    cout << " File Tracking System \n";
-    cout << "Commands:\n";
-    cout << "  add <path>    - add file to tracking\n";
-    cout << "  remove <path> - remove file from tracking\n";
-    cout << "  list          - show all tracked files\n";
-    cout << "  start         - start tracking\n";
-    cout << "  stop          - stop tracking\n";
-    cout << "  exit          - exit program\n\n";
-
-    bool isTracking = false;
-
-    while (true)
+    for (TrackedFile* file : qAsConst(m_files))
     {
-        cout << "> ";
-        cout.flush();
+        delete file;
+    }
+    m_files.clear();
 
-        QString line = cin.readLine();
-        if (line.isEmpty()) continue;
+    Logger::instance().logInfo("FileManager destroyed");
+}
 
-        QStringList parts = line.split(' ', Qt::SkipEmptyParts);
-        QString command = parts[0].toLower();
+FileManager& FileManager::instance()
+{
+    static FileManager manager;
+    return manager;
+}
 
-        if (command == "exit")
-        {
-            Logger::instance().logInfo("Program finished");
-            break;
-        }
-        else if (command == "add" && parts.size() > 1)
-        {
-            FileManager::instance().addFile(parts[1]);
-        }
-        else if (command == "remove" && parts.size() > 1)
-        {
-            FileManager::instance().removeFile(parts[1]);
-        }
-        else if (command == "list")
-        {
-            FileManager::instance().listFiles();
-        }
-        else if (command == "start")
-        {
-            if (FileManager::instance().fileCount() == 0)
-            {
-                Logger::instance().logError("No files to track. Add files first.");
-                continue;
-            }
+void FileManager::addFile(const QString &path)
+{
+    QMutexLocker locker(&m_mutex);
 
-            isTracking = true;
-            Logger::instance().logInfo("Tracking started for " +
-                                       QString::number(FileManager::instance().fileCount()) + " files");
-
-            while (isTracking)
-            {
-                for (TrackedFile* file : qAsConst(FileManager::instance().files()))
-                {
-                    file->checkForChanges();
-                }
-
-                QCoreApplication::processEvents();
-                QThread::msleep(100);
-            }
-        }
-        else if (command == "stop")
+    for (TrackedFile* file : qAsConst(m_files))
+    {
+        if (file->path() == path)
         {
-            if (isTracking)
-            {
-                isTracking = false;
-                Logger::instance().logInfo("Tracking stopped");
-            }
-            else
-            {
-                Logger::instance().logError("Tracking is not running");
-            }
-        }
-        else
-        {
-            Logger::instance().logError("Unknown command: " + command);
+            Logger::instance().logEvent("File already tracked: " + path);
+            return;
         }
     }
 
-    return 0;
+    TrackedFile* file = new TrackedFile(path);
+
+    connect(file, &TrackedFile::fileCreated,
+            this, &FileManager::onFileCreated);
+    connect(file, &TrackedFile::fileModified,
+            this, &FileManager::onFileModified);
+    connect(file, &TrackedFile::fileNotExists,
+            this, &FileManager::onFileNotExists);
+
+    m_files.append(file);
+
+    Logger::instance().logEvent("File added: " + path);
+}
+
+void FileManager::removeFile(const QString &path)
+{
+    QMutexLocker locker(&m_mutex);
+
+    for (int i = 0; i < m_files.size(); ++i)
+    {
+        if (m_files[i]->path() == path)
+        {
+            delete m_files[i];
+            m_files.remove(i);
+
+            Logger::instance().logEvent("File removed: " + path);
+            return;
+        }
+    }
+
+    Logger::instance().logError("File not found: " + path);
+}
+
+void FileManager::listFiles() const
+{
+    QMutexLocker locker(&m_mutex);
+
+    if (m_files.isEmpty())
+    {
+        Logger::instance().logInfo("No files being tracked");
+    }
+    else
+    {
+        Logger::instance().logInfo("Tracked files (" +
+                                   QString::number(m_files.size()) + "):");
+        for (const TrackedFile* file : qAsConst(m_files))
+        {
+            QString status;
+            if (file->exists())
+            {
+                status = "exists, size: " + QString::number(file->size()) + " bytes";
+            }
+            else
+            {
+                status = "does not exist";
+            }
+            Logger::instance().logInfo("  " + file->path() + " (" + status + ")");
+        }
+    }
+}
+
+int FileManager::fileCount() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_files.size();
+}
+
+TrackedFile* FileManager::getFile(const QString &path) const
+{
+    QMutexLocker locker(&m_mutex);
+
+    for (TrackedFile* file : qAsConst(m_files))
+    {
+        if (file->path() == path)
+        {
+            return file;
+        }
+    }
+    return nullptr;
+}
+
+void FileManager::onFileCreated(const QString &path, qint64 size)
+{
+    QString message;
+    if (size == 0)
+    {
+        message = QString("File exists: %1, size: %2 bytes (empty)").arg(path).arg(size);
+    }
+    else
+    {
+        message = QString("File exists: %1, size: %2 bytes").arg(path).arg(size);
+    }
+    Logger::instance().logEvent(message);
+}
+
+void FileManager::onFileModified(const QString &path, qint64 size)
+{
+    QString message = QString("File changed: %1, new size: %2 bytes").arg(path).arg(size);
+    Logger::instance().logEvent(message);
+
+    QString existsMsg = QString("File exists: %1, size: %2 bytes").arg(path).arg(size);
+    Logger::instance().logEvent(existsMsg);
+}
+
+void FileManager::onFileNotExists(const QString &path)
+{
+    QString message = QString("File does not exist: %1").arg(path);
+    Logger::instance().logEvent(message);
 }
