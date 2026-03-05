@@ -1,6 +1,5 @@
 #include "manager.h"
 #include "logger.h"
-#include <QDebug>
 
 FileManager::FileManager(QObject *parent)
     : QObject(parent)
@@ -11,13 +10,11 @@ FileManager::FileManager(QObject *parent)
 FileManager::~FileManager()
 {
     QMutexLocker locker(&m_mutex);
-
-    for (TrackedFile* file : qAsConst(m_files))
+    for (int i = 0; i < m_files.size(); ++i)
     {
-        delete file;
+        delete m_files[i];
     }
     m_files.clear();
-
     Logger::instance().logInfo("FileManager destroyed");
 }
 
@@ -30,10 +27,9 @@ FileManager& FileManager::instance()
 void FileManager::addFile(const QString &path)
 {
     QMutexLocker locker(&m_mutex);
-
-    for (TrackedFile* file : qAsConst(m_files))
+    for (int i = 0; i < m_files.size(); ++i)
     {
-        if (file->path() == path)
+        if (m_files[i]->path() == path)
         {
             Logger::instance().logEvent("File already tracked: " + path);
             return;
@@ -42,16 +38,14 @@ void FileManager::addFile(const QString &path)
 
     TrackedFile* file = new TrackedFile(path);
 
-    connect(file, &TrackedFile::fileCreated,
-            this, &FileManager::onFileCreated);
-    connect(file, &TrackedFile::fileModified,
-            this, &FileManager::onFileModified);
-    connect(file, &TrackedFile::fileNotExists,
-            this, &FileManager::onFileNotExists);
+    connect(file, &TrackedFile::fileCreated,this, &FileManager::onFileCreated);
+    connect(file, &TrackedFile::fileModified,this, &FileManager::onFileModified);
+    connect(file, &TrackedFile::fileNotExists,this, &FileManager::onFileNotExists);
 
     m_files.append(file);
 
     Logger::instance().logEvent("File added: " + path);
+    file->checkForChanges();
 }
 
 void FileManager::removeFile(const QString &path)
@@ -64,12 +58,10 @@ void FileManager::removeFile(const QString &path)
         {
             delete m_files[i];
             m_files.remove(i);
-
             Logger::instance().logEvent("File removed: " + path);
             return;
         }
     }
-
     Logger::instance().logError("File not found: " + path);
 }
 
@@ -83,10 +75,10 @@ void FileManager::listFiles() const
     }
     else
     {
-        Logger::instance().logInfo("Tracked files (" +
-                                   QString::number(m_files.size()) + "):");
-        for (const TrackedFile* file : qAsConst(m_files))
+        Logger::instance().logInfo("Tracked files (" + QString::number(m_files.size()) + "):");
+        for (int i = 0; i < m_files.size(); ++i)
         {
+            const TrackedFile* file = m_files[i];
             QString status;
             if (file->exists())
             {
@@ -107,15 +99,20 @@ int FileManager::fileCount() const
     return m_files.size();
 }
 
+const QVector<TrackedFile*>& FileManager::files() const
+{
+    return m_files;
+}
+
 TrackedFile* FileManager::getFile(const QString &path) const
 {
     QMutexLocker locker(&m_mutex);
 
-    for (TrackedFile* file : qAsConst(m_files))
+    for (int i = 0; i < m_files.size(); ++i)
     {
-        if (file->path() == path)
+        if (m_files[i]->path() == path)
         {
-            return file;
+            return m_files[i];
         }
     }
     return nullptr;

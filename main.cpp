@@ -1,13 +1,29 @@
-#include <QCoreApplication>
 #include <QTextStream>
-#include <QThread>
+#include <QVector>
+#include <QFileInfo>
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include "fileentity.h"
 #include "manager.h"
 #include "logger.h"
 
-int main(int argc, char *argv[])
-{
-    QCoreApplication app(argc, argv);
+std::atomic<bool> trackingActive(false);
 
+void trackingThreadFunction()
+{
+    while (trackingActive)
+    {
+        for (TrackedFile* file : FileManager::instance().files())
+        {
+            file->checkForChanges();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+int main()
+{
     QTextStream cin(stdin);
     QTextStream cout(stdout);
 
@@ -22,7 +38,7 @@ int main(int argc, char *argv[])
     cout << "  stop          - stop tracking\n";
     cout << "  exit          - exit program\n\n";
 
-    bool isTracking = false;
+    std::thread trackingThread;
 
     while (true)
     {
@@ -37,6 +53,12 @@ int main(int argc, char *argv[])
 
         if (command == "exit")
         {
+            if (trackingActive)
+            {
+                trackingActive = false;
+                if (trackingThread.joinable())
+                    trackingThread.join();
+            }
             Logger::instance().logInfo("Program finished");
             break;
         }
@@ -60,26 +82,25 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            isTracking = true;
-            Logger::instance().logInfo("Tracking started for " +
-                                       QString::number(FileManager::instance().fileCount()) + " files");
-
-            while (isTracking)
+            if (!trackingActive)
             {
-                for (TrackedFile* file : qAsConst(FileManager::instance().files()))
-                {
-                    file->checkForChanges();
-                }
-
-                QCoreApplication::processEvents();
-                QThread::msleep(100);
+                trackingActive = true;
+                trackingThread = std::thread(trackingThreadFunction);
+                Logger::instance().logInfo("Tracking started for " +
+                                           QString::number(FileManager::instance().fileCount()) + " files");
+            }
+            else
+            {
+                Logger::instance().logError("Tracking already running");
             }
         }
         else if (command == "stop")
         {
-            if (isTracking)
+            if (trackingActive)
             {
-                isTracking = false;
+                trackingActive = false;
+                if (trackingThread.joinable())
+                    trackingThread.join();
                 Logger::instance().logInfo("Tracking stopped");
             }
             else
