@@ -9,7 +9,8 @@ CONFIG += c++17 cmdline
 SOURCES += \
         fileentity.cpp \
         logger.cpp \
-        main.cpp
+        main.cpp \
+        manager.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -18,4 +19,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     fileentity.h \
-    logger.h
+    logger.h \
+    manager.h
