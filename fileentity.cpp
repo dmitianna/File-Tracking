@@ -64,8 +64,7 @@ void TrackedFile::checkForChanges()
                 m_fileSize = newSize;
 
                 emit fileModified(m_filePath, newSize);
-                qDebug() << "File modified:" << m_filePath
-                         << "was:" << oldSize << "now:" << newSize;
+                qDebug() << "File modified:" << m_filePath << "was:" << oldSize << "now:" << newSize;
             }
         }
     }
