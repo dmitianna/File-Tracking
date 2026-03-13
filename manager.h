@@ -20,7 +20,7 @@ public:
     void removeFile(const QString &path);
     void listFiles() const;
     int fileCount() const;
-    const QVector<TrackedFile*>& files() const { return m_files; }
+    const QVector<TrackedFile*>& files() const;
     TrackedFile* getFile(const QString &path) const;
 
 private slots:
