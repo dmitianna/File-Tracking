@@ -1,14 +1,11 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <QObject>
 #include <QTextStream>
 #include <QMutex>
 
-class Logger : public QObject
+class Logger
 {
-    Q_OBJECT
-
 public:
     static Logger& instance();
     Logger(const Logger&) = delete;
@@ -19,7 +16,7 @@ public:
     void logEvent(const QString &message);
 
 private:
-    explicit Logger(QObject *parent = nullptr);
+    Logger();
     ~Logger();
 
     QTextStream m_consoleStream;
