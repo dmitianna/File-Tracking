@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QVector>
-#include <QMutex>
+#include <QTimer>
 #include "fileentity.h"
 
 class FileManager : public QObject
@@ -11,17 +11,17 @@ class FileManager : public QObject
     Q_OBJECT
 
 public:
-    static FileManager& instance();
+    explicit FileManager(QObject *parent = nullptr);
+    ~FileManager();
 
-    FileManager(const FileManager&) = delete;
-    FileManager& operator=(const FileManager&) = delete;
-
+public slots:
     void addFile(const QString &path);
     void removeFile(const QString &path);
-    void listFiles() const;
-    int fileCount() const;
-    const QVector<TrackedFile*>& files() const;
-    TrackedFile* getFile(const QString &path) const;
+    void listFiles();
+    void startTracking();
+    void stopTracking();
+    void checkAllFiles();
+    void shutdown();
 
 private slots:
     void onFileCreated(const QString &path, qint64 size);
@@ -29,11 +29,9 @@ private slots:
     void onFileNotExists(const QString &path);
 
 private:
-    explicit FileManager(QObject *parent = nullptr);
-    ~FileManager();
-
     QVector<TrackedFile*> m_files;
-    mutable QMutex m_mutex;
+    QTimer *m_timer;
+    bool m_tracking;
 };
 
 #endif // FILEMANAGER_H
