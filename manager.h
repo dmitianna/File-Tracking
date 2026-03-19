@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QVector>
-#include <QMutex>
 #include <QTimer>
 #include "fileentity.h"
 
