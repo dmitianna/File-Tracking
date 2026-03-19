@@ -50,10 +50,6 @@ void FileManager::addFile(const QString &path)
     TrackedFile* file = new TrackedFile(normalizedPath, this);
 
     QFileInfo info(normalizedPath);
-    if (!info.exists())
-    {
-        Logger::instance().logEvent("File does not exist yet: " + normalizedPath);
-    }
     connect(file, &TrackedFile::fileCreated,this, &FileManager::onFileCreated);
     connect(file, &TrackedFile::fileModified,this, &FileManager::onFileModified);
     connect(file, &TrackedFile::fileNotExists,this, &FileManager::onFileNotExists);
@@ -82,8 +78,7 @@ void FileManager::removeFile(const QString &path)
     {
         if (m_files[i]->path() == normalizedPath)
         {
-            delete m_files[i];
-            m_files.removeAt(i);
+            delete m_files.takeAt(i);
             Logger::instance().logEvent("File removed: " + normalizedPath);
             return;
         }
