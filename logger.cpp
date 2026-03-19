@@ -1,6 +1,6 @@
 #include "logger.h"
 
-Logger::Logger(QObject *parent): QObject(parent), m_consoleStream(stdout)
+Logger::Logger(): m_consoleStream(stdout)
 {
     logInfo("Logging started");
 }
