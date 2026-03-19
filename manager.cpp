@@ -49,6 +49,11 @@ void FileManager::addFile(const QString &path)
 
     TrackedFile* file = new TrackedFile(normalizedPath, this);
 
+    QFileInfo info(normalizedPath);
+    if (!info.exists())
+    {
+        Logger::instance().logEvent("File does not exist yet: " + normalizedPath);
+    }
     connect(file, &TrackedFile::fileCreated,this, &FileManager::onFileCreated);
     connect(file, &TrackedFile::fileModified,this, &FileManager::onFileModified);
     connect(file, &TrackedFile::fileNotExists,this, &FileManager::onFileNotExists);
@@ -96,8 +101,9 @@ void FileManager::listFiles()
     Logger::instance().logInfo(
         "Tracked files (" + QString::number(m_files.size()) + "):");
 
-    for (TrackedFile *file : m_files)
+    for (int i = 0; i < m_files.size(); ++i)
     {
+        TrackedFile *file = m_files[i];
         if (file->exists())
         {
             Logger::instance().logInfo(
