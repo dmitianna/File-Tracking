@@ -38,6 +38,12 @@ void FileManager::addFile(const QString &path)
         return;
     }
 
+    QFileInfo info(normalizedPath);
+    if (info.exists() && !info.isFile())
+    {
+        Logger::instance().logError("The path is not a file: " + normalizedPath);
+        return;
+    }
     for (int i = 0; i < m_files.size(); ++i)
     {
         if (m_files[i]->path() == normalizedPath)
@@ -46,10 +52,7 @@ void FileManager::addFile(const QString &path)
             return;
         }
     }
-
     TrackedFile* file = new TrackedFile(normalizedPath, this);
-
-    QFileInfo info(normalizedPath);
     connect(file, &TrackedFile::fileCreated,this, &FileManager::onFileCreated);
     connect(file, &TrackedFile::fileModified,this, &FileManager::onFileModified);
     connect(file, &TrackedFile::fileNotExists,this, &FileManager::onFileNotExists);
