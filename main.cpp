@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     QTextStream cin(stdin);
     QTextStream cout(stdout);
 
-    Logger::instance().logInfo("Program started");
+    //Logger::instance().logInfo("Program started");
 
     FileManager *manager = new FileManager;
 
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
             QMetaObject::invokeMethod(manager, "destroyTrackedObjects", Qt::BlockingQueuedConnection);
             workerThread.quit();
             workerThread.wait();
-            Logger::instance().logInfo("Program finished");
+            //Logger::instance().logInfo("Program finished");
             break;
         }
         else if (command == "add")
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            QMetaObject::invokeMethod(manager,"addFile",Qt::QueuedConnection,Q_ARG(QString, argument));
+            QMetaObject::invokeMethod(manager,"addFile",Qt::BlockingQueuedConnection,Q_ARG(QString, argument));
         }
         else if (command == "remove")
         {
@@ -68,19 +68,19 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            QMetaObject::invokeMethod(manager,"removeFile",Qt::QueuedConnection,Q_ARG(QString, argument));
+            QMetaObject::invokeMethod(manager,"removeFile",Qt::BlockingQueuedConnection,Q_ARG(QString, argument));
         }
         else if (command == "list")
         {
-            QMetaObject::invokeMethod(manager,"listFiles",Qt::QueuedConnection);
+            QMetaObject::invokeMethod(manager,"listFiles",Qt::BlockingQueuedConnection);
         }
         else if (command == "start")
         {
-            QMetaObject::invokeMethod(manager,"startTracking",Qt::QueuedConnection);
+            QMetaObject::invokeMethod(manager,"startTracking",Qt::BlockingQueuedConnection);
         }
         else if (command == "stop")
         {
-            QMetaObject::invokeMethod(manager,"stopTracking",Qt::QueuedConnection);
+            QMetaObject::invokeMethod(manager,"stopTracking",Qt::BlockingQueuedConnection);
         }
         else
         {

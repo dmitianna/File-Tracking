@@ -8,7 +8,7 @@ FileManager::FileManager(QObject *parent)
 {
     m_timer->setInterval(100);
     connect(m_timer, &QTimer::timeout, this, &FileManager::checkAllFiles);
-    Logger::instance().logInfo("FileManager created");
+    //Logger::instance().logInfo("FileManager created");
 }
 
 
@@ -19,7 +19,7 @@ FileManager::~FileManager()
         m_timer->stop();
     }
     m_files.clear();
-    Logger::instance().logInfo("FileManager destroyed");
+    //Logger::instance().logInfo("FileManager destroyed");
 }
 
 
@@ -81,13 +81,7 @@ void FileManager::removeFile(const QString &path)
     {
         if (m_files[i] && (m_files[i]->path() == normalizedPath))
         {
-            TrackedFile *file = m_files[i];
-            m_files.removeAt(i);
-
-            if (file)
-            {
-                delete file;
-            }
+            delete m_files.takeAt(i);
             Logger::instance().logEvent("File removed: " + normalizedPath);
             return;
         }
@@ -107,6 +101,10 @@ void FileManager::listFiles()
 
     for (int i = 0; i < m_files.size(); ++i)
     {
+        if (!m_files[i])
+        {
+            continue;
+        }
         TrackedFile *file = m_files[i];
         if (file->exists())
         {
@@ -161,9 +159,13 @@ void FileManager::stopTracking()
 
 void FileManager::checkAllFiles()
 {
-    for (int i = 0; i < m_files.size(); ++i)
+    for (int i = m_files.size() - 1; i >= 0; --i)
     {
-        if (m_files[i])
+        if (!m_files[i])
+        {
+            m_files.removeAt(i);
+        }
+        else
         {
             m_files[i]->checkForChanges();
         }
@@ -181,14 +183,12 @@ void FileManager::shutdown()
 
 void FileManager::destroyTrackedObjects()
 {
-    for (int i = 0; i < m_files.size(); ++i)
+    for (int i = m_files.size() - 1; i >= 0; --i)
     {
-        if (m_files[i])
-        {
-            delete m_files[i];
-        }
+        delete m_files.takeAt(i);
     }
     m_files.clear();
+    //Logger::instance().logInfo("Tracked files are deleted");
 }
 
 void FileManager::onFileCreated(const QString &path, qint64 size)
