@@ -1,5 +1,6 @@
 #include "manager.h"
 #include "logger.h"
+#include <QDir>
 
 FileManager::FileManager(QObject *parent)
     : QObject(parent)
@@ -22,10 +23,28 @@ FileManager::~FileManager()
     //Logger::instance().logInfo("FileManager destroyed");
 }
 
+QString FileManager::normalizePath(const QString &path) const
+{
+    QString normalized = path.trimmed();
+
+    if (normalized.length() >= 2)
+    {
+        const QChar first = normalized.front();
+        const QChar last = normalized.back();
+
+        if ((first == '"' && last == '"') ||
+            (first == '\'' && last == '\''))
+        {
+            normalized = normalized.mid(1, normalized.length() - 2).trimmed();
+        }
+    }
+
+    return QDir::fromNativeSeparators(normalized);
+}
 
 void FileManager::addFile(const QString &path)
 {
-    QString normalizedPath = path.trimmed();
+    QString normalizedPath = normalizePath(path);
     if(normalizedPath.isEmpty())
     {
         Logger::instance().logError("Empty path");
@@ -76,7 +95,7 @@ void FileManager::addFile(const QString &path)
 
 void FileManager::removeFile(const QString &path)
 {
-    QString normalizedPath = path.trimmed();
+    QString normalizedPath = normalizePath(path);
     for (int i = 0; i < m_files.size(); ++i)
     {
         if (m_files[i] && (m_files[i]->path() == normalizedPath))
@@ -191,31 +210,32 @@ void FileManager::destroyTrackedObjects()
     //Logger::instance().logInfo("Tracked files are deleted");
 }
 
+
 void FileManager::onFileCreated(const QString &path, qint64 size)
 {
     QString message;
     if (size == 0)
     {
-        message = QString("File exists: %1, size: %2 bytes (empty)").arg(path).arg(size);
+        message = QString("File exists: %1, size: %2 bytes (empty)\n>").arg(path).arg(size);
     }
     else
     {
-        message = QString("File exists: %1, size: %2 bytes").arg(path).arg(size);
+        message = QString("File exists: %1, size: %2 bytes\n>").arg(path).arg(size);
     }
     Logger::instance().logEvent(message);
 }
 
 void FileManager::onFileModified(const QString &path, qint64 size)
 {
-    QString message = QString("File changed: %1, new size: %2 bytes").arg(path).arg(size);
+    QString message = QString("File changed: %1, new size: %2 bytes\n>").arg(path).arg(size);
     Logger::instance().logEvent(message);
 
-    QString existsMsg = QString("File exists: %1, size: %2 bytes").arg(path).arg(size);
+    QString existsMsg = QString("File exists: %1, size: %2 bytes\n>").arg(path).arg(size);
     Logger::instance().logEvent(existsMsg);
 }
 
 void FileManager::onFileNotExists(const QString &path)
 {
-    QString message = QString("File does not exist: %1").arg(path);
+    QString message = QString("File does not exist: %1\n>").arg(path);
     Logger::instance().logEvent(message);
 }

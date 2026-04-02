@@ -30,6 +30,7 @@ private slots:
     void onFileNotExists(const QString &path);
 
 private:
+    QString normalizePath(const QString &path) const;
     QVector<QPointer<TrackedFile>> m_files;
     QTimer *m_timer;
     bool m_tracking;
