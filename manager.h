@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QVector>
 #include <QTimer>
+#include <QPointer>
 #include "fileentity.h"
 
 class FileManager : public QObject
@@ -29,7 +30,7 @@ private slots:
     void onFileNotExists(const QString &path);
 
 private:
-    QVector<TrackedFile*> m_files;
+    QVector<QPointer<TrackedFile>> m_files;
     QTimer *m_timer;
     bool m_tracking;
 };

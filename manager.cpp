@@ -63,7 +63,7 @@ void FileManager::addFile(const QString &path)
     connect(file, &TrackedFile::fileModified,this, &FileManager::onFileModified);
     connect(file, &TrackedFile::fileNotExists,this, &FileManager::onFileNotExists);
 
-    m_files.append(file);
+    m_files.append(QPointer<TrackedFile>(file));
 
     Logger::instance().logEvent("File added: " + normalizedPath);
 
