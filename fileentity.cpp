@@ -8,7 +8,7 @@ TrackedFile::TrackedFile(const QString &filePath, QObject *parent): QObject(pare
 {
     m_fileInfo.refresh();
 
-    if (m_fileInfo.exists())
+    if (m_fileInfo.exists() && m_fileInfo.isFile())
     {
         m_exists = true;
         m_fileSize = m_fileInfo.size();
@@ -18,7 +18,7 @@ TrackedFile::TrackedFile(const QString &filePath, QObject *parent): QObject(pare
 void TrackedFile::checkForChanges()
 {
     m_fileInfo.refresh();
-    bool nowExists = m_fileInfo.exists();
+    bool nowExists = m_fileInfo.exists() && m_fileInfo.isFile();;
 
     if (!m_exists && nowExists)
     {
