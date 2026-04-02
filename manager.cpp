@@ -44,6 +44,12 @@ void FileManager::addFile(const QString &path)
         Logger::instance().logError("The path is not a file: " + normalizedPath);
         return;
     }
+
+    if (!info.exists())
+    {
+        Logger::instance().logError("File does not exist: " + normalizedPath);
+        return;
+    }
     for (int i = 0; i < m_files.size(); ++i)
     {
         if (m_files[i]->path() == normalizedPath)
