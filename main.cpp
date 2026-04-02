@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
         if (command == "exit")
         {
             QMetaObject::invokeMethod(manager,"shutdown",Qt::BlockingQueuedConnection);
+            QMetaObject::invokeMethod(manager, "destroyTrackedObjects", Qt::BlockingQueuedConnection);
             workerThread.quit();
             workerThread.wait();
             Logger::instance().logInfo("Program finished");

@@ -18,12 +18,6 @@ FileManager::~FileManager()
     {
         m_timer->stop();
     }
-    /*for (int i = 0; i < m_files.size(); ++i)
-    {
-        delete m_files[i];
-    }
-    */
-    qDeleteAll(m_files);
     m_files.clear();
     Logger::instance().logInfo("FileManager destroyed");
 }
@@ -52,7 +46,7 @@ void FileManager::addFile(const QString &path)
     }
     for (int i = 0; i < m_files.size(); ++i)
     {
-        if (m_files[i]->path() == normalizedPath)
+        if (m_files[i] && (m_files[i]->path() == normalizedPath))
         {
             Logger::instance().logEvent("File already tracked: " + path);
             return;
@@ -85,9 +79,15 @@ void FileManager::removeFile(const QString &path)
     QString normalizedPath = path.trimmed();
     for (int i = 0; i < m_files.size(); ++i)
     {
-        if (m_files[i]->path() == normalizedPath)
+        if (m_files[i] && (m_files[i]->path() == normalizedPath))
         {
-            delete m_files.takeAt(i);
+            TrackedFile *file = m_files[i];
+            m_files.removeAt(i);
+
+            if (file)
+            {
+                delete file;
+            }
             Logger::instance().logEvent("File removed: " + normalizedPath);
             return;
         }
@@ -163,7 +163,10 @@ void FileManager::checkAllFiles()
 {
     for (int i = 0; i < m_files.size(); ++i)
     {
-        m_files[i]->checkForChanges();
+        if (m_files[i])
+        {
+            m_files[i]->checkForChanges();
+        }
     }
 }
 
@@ -174,6 +177,18 @@ void FileManager::shutdown()
         m_timer->stop();
         m_tracking = false;
     }
+}
+
+void FileManager::destroyTrackedObjects()
+{
+    for (int i = 0; i < m_files.size(); ++i)
+    {
+        if (m_files[i])
+        {
+            delete m_files[i];
+        }
+    }
+    m_files.clear();
 }
 
 void FileManager::onFileCreated(const QString &path, qint64 size)
