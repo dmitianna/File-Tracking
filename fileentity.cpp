@@ -51,3 +51,19 @@ void TrackedFile::checkForChanges()
         }
     }
 }
+
+void TrackedFile::refreshState()
+{
+    m_fileInfo.refresh();
+
+    if (m_fileInfo.exists() && m_fileInfo.isFile())
+    {
+        m_exists = true;
+        m_fileSize = m_fileInfo.size();
+    }
+    else
+    {
+        m_exists = false;
+        m_fileSize = 0;
+    }
+}

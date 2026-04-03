@@ -16,6 +16,7 @@ public:
     qint64 size() const { return m_fileSize; }
 
     void checkForChanges();
+    void refreshState();
 signals:
     void fileCreated(const QString &path, qint64 size);
     void fileModified(const QString &path, qint64 size);

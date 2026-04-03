@@ -125,18 +125,14 @@ void FileManager::listFiles()
             continue;
         }
         TrackedFile *file = m_files[i];
+        file->refreshState();
         if (file->exists())
         {
-            Logger::instance().logInfo(
-                QString("  %1 (exists, size: %2 bytes)")
-                    .arg(file->path())
-                    .arg(file->size()));
+            Logger::instance().logInfo(QString("  %1 (exists, size: %2 bytes)").arg(file->path()).arg(file->size()));
         }
         else
         {
-            Logger::instance().logInfo(
-                QString("  %1 (does not exist)")
-                    .arg(file->path()));
+            Logger::instance().logInfo(QString("  %1 (does not exist)").arg(file->path()));
         }
     }
 }
