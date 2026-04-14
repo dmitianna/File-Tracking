@@ -1,5 +1,5 @@
-#ifndef FILEENTITY_H
-#define FILEENTITY_H
+#ifndef TRACKEDFILE_H
+#define TRACKEDFILE_H
 
 #include <QObject>
 #include <QFileInfo>
@@ -31,4 +31,4 @@ private:
     QFileInfo m_fileInfo;
 };
 
-#endif // FILEENTITY_H
+#endif // TRACKEDFILE_H

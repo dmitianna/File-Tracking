@@ -5,7 +5,7 @@
 #include <QVector>
 #include <QTimer>
 #include <QPointer>
-#include "fileentity.h"
+#include "trackedfile.h"
 
 class FileManager : public QObject
 {
@@ -23,7 +23,6 @@ public slots:
     void stopTracking();
     void checkAllFiles();
     void shutdown();
-    void destroyTrackedObjects();
 private slots:
     void onFileCreated(const QString &path, qint64 size);
     void onFileModified(const QString &path, qint64 size);
