@@ -15,8 +15,10 @@ public:
     bool exists() const { return m_exists; }
     qint64 size() const { return m_fileSize; }
 
+    bool currentExists() const;
+    qint64 currentSize() const;
+
     void checkForChanges();
-    void refreshState();
 signals:
     void fileCreated(const QString &path, qint64 size);
     void fileModified(const QString &path, qint64 size);

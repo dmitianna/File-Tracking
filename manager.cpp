@@ -58,11 +58,6 @@ void FileManager::addFile(const QString &path)
         return;
     }
 
-    if (!info.exists())
-    {
-        Logger::instance().logError("File does not exist: " + normalizedPath);
-        return;
-    }
     for (int i = 0; i < m_files.size(); ++i)
     {
         if (m_files[i] && (m_files[i]->path() == normalizedPath))
@@ -125,10 +120,9 @@ void FileManager::listFiles()
             continue;
         }
         TrackedFile *file = m_files[i];
-        file->refreshState();
-        if (file->exists())
+        if (file->currentExists())
         {
-            Logger::instance().logInfo(QString("  %1 (exists, size: %2 bytes)").arg(file->path()).arg(file->size()));
+            Logger::instance().logInfo(QString("  %1 (exists, size: %2 bytes)").arg(file->path()).arg(file->currentSize()));
         }
         else
         {
@@ -212,26 +206,21 @@ void FileManager::onFileCreated(const QString &path, qint64 size)
     QString message;
     if (size == 0)
     {
-        message = QString("File exists: %1, size: %2 bytes (empty)\n>").arg(path).arg(size);
+        Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes (empty)").arg(path).arg(size));
     }
     else
     {
-        message = QString("File exists: %1, size: %2 bytes\n>").arg(path).arg(size);
+        Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));
     }
-    Logger::instance().logEvent(message);
 }
 
 void FileManager::onFileModified(const QString &path, qint64 size)
 {
-    QString message = QString("File changed: %1, new size: %2 bytes\n>").arg(path).arg(size);
-    Logger::instance().logEvent(message);
-
-    QString existsMsg = QString("File exists: %1, size: %2 bytes\n>").arg(path).arg(size);
-    Logger::instance().logEvent(existsMsg);
+    Logger::instance().logEvent(QString("File changed: %1, new size: %2 bytes").arg(path).arg(size));
+    Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));
 }
 
 void FileManager::onFileNotExists(const QString &path)
 {
-    QString message = QString("File does not exist: %1\n>").arg(path);
-    Logger::instance().logEvent(message);
+    Logger::instance().logEvent(QString("File does not exist: %1").arg(path));
 }

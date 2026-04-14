@@ -15,6 +15,24 @@ TrackedFile::TrackedFile(const QString &filePath, QObject *parent): QObject(pare
     }
 }
 
+bool TrackedFile::currentExists() const
+{
+    QFileInfo info(m_filePath);
+    return info.exists() && info.isFile();
+}
+
+qint64 TrackedFile::currentSize() const
+{
+    QFileInfo info(m_filePath);
+
+    if (info.exists() && info.isFile())
+    {
+        return info.size();
+    }
+
+    return 0;
+}
+
 void TrackedFile::checkForChanges()
 {
     m_fileInfo.refresh();
@@ -52,18 +70,3 @@ void TrackedFile::checkForChanges()
     }
 }
 
-void TrackedFile::refreshState()
-{
-    m_fileInfo.refresh();
-
-    if (m_fileInfo.exists() && m_fileInfo.isFile())
-    {
-        m_exists = true;
-        m_fileSize = m_fileInfo.size();
-    }
-    else
-    {
-        m_exists = false;
-        m_fileSize = 0;
-    }
-}
