@@ -19,20 +19,17 @@ Logger& Logger::instance()
 void Logger::logInfo(const QString &message)
 {
     QMutexLocker locker(&m_mutex);
-    m_consoleStream << "INFO: " << message << "\n";
-    m_consoleStream.flush();
+    m_consoleStream << "INFO: " << message << "\n" << Qt::endl;
 }
 
 void Logger::logError(const QString &message)
 {
     QMutexLocker locker(&m_mutex);
-    m_consoleStream << "ERROR: " << message << "\n";
-    m_consoleStream.flush();
+    m_consoleStream << "ERROR: " << message << "\n"<< Qt::endl;
 }
 
 void Logger::logEvent(const QString &message)
 {
     QMutexLocker locker(&m_mutex);
-    m_consoleStream << "EVENT: " << message << "\n";
-    m_consoleStream.flush();
+    m_consoleStream << "EVENT: " << message << "\n"<< Qt::endl;
 }

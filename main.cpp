@@ -11,8 +11,6 @@ int main(int argc, char *argv[])
     QTextStream cin(stdin);
     QTextStream cout(stdout);
 
-    //Logger::instance().logInfo("Program started");
-
     FileManager *manager = new FileManager;
 
     cout << "=== File Tracking System ===\n";
@@ -22,8 +20,8 @@ int main(int argc, char *argv[])
     cout << "  list          - show all tracked files\n";
     cout << "  start         - start tracking\n";
     cout << "  stop          - stop tracking\n";
-    cout << "  exit          - exit program\n\n";
-    cout << "  Note: paths with spaces are not supported";
+    cout << "  exit          - exit program\n";
+    cout << "  Note: paths with spaces are not supported\n\n";
 
     QThread workerThread;
     manager->moveToThread(&workerThread);
@@ -58,6 +56,7 @@ int main(int argc, char *argv[])
             if (parts.size() != 2)
             {
                 Logger::instance().logError("Invalid number of arguments for command: " + command);
+                Logger::instance().logError("Usage: add/remove <path>");
                 continue;
             }
 

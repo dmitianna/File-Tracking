@@ -21,9 +21,9 @@ public slots:
     void listFiles();
     void startTracking();
     void stopTracking();
+private slots:
     void checkAllFiles();
     void shutdown();
-private slots:
     void onFileCreated(const QString &path, qint64 size);
     void onFileModified(const QString &path, qint64 size);
     void onFileNotExists(const QString &path);

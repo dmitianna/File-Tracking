@@ -93,8 +93,13 @@ void FileManager::removeFile(const QString &path)
         {
             delete m_files.takeAt(i);
             Logger::instance().logEvent("File removed: " + normalizedPath);
+            if (m_files.isEmpty() && m_tracking)
+            {
+                stopTracking();
+            }
             return;
         }
+
     }
     Logger::instance().logError("File not found: " + normalizedPath);
 }
