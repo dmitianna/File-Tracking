@@ -10,16 +10,14 @@
 При изменении состояния файла программа должна выводить соответствующее уведомление в консоль.
 
 Рассматриваются следующие состояния файла:
-1. Файл существует и не пуст — выводится информация о размере.
-2. Файл существует и изменился — выводится сообщение об изменении и новый размер.
-3. Файл не существует — выводится соответствующее уведомление.
+1. Файл существует и не пуст - выводится информация о размере.
+2. Файл существует и изменился - выводится сообщение об изменении и новый размер.
+3. Файл не существует - выводится соответствующее уведомление.
 
 Слежение за файлами должно выполняться периодически с заданным интервалом времени (100 мс).
 # 2. Предлагаемое решение
 
 ## Общая идея решения
-
-Решение основано на объектно-ориентированном подходе с использованием библиотеки Qt.
 
 Основные идеи:
 - каждый файл представлен отдельным объектом;
@@ -60,8 +58,8 @@
 
 Особенности:
 - реализован как Singleton;
-- потокобезопасный (использует QMutex);
-- поддерживает уровни логирования:
+- использует QMutex;
+- уровни логирования:
   - INFO
   - ERROR
   - EVENT
@@ -78,9 +76,7 @@
 
 ---
 
-# Тест-кейсы для утилиты слежения за файлами
-
-## 1. Команды интерфейса
+# Тест-кейсы
 
 ### Тест 1. list при пустом списке
 **Шаги:**
@@ -89,7 +85,6 @@
 **Вывод программы:**
 INFO: No files being tracked
 
----
 
 ### Тест 2. start без файлов
 **Шаги:**
@@ -98,7 +93,6 @@ INFO: No files being tracked
 **Вывод программы:**
 ERROR: No files to track. Add files first.
 
----
 
 ### Тест 3. stop, когда слежение не запущено
 **Шаги:**
@@ -107,7 +101,6 @@ ERROR: No files to track. Add files first.
 **Вывод программы:**
 ERROR: Tracking is not running
 
----
 
 ### Тест 4. неизвестная команда
 **Шаги:**
@@ -116,7 +109,6 @@ ERROR: Tracking is not running
 **Вывод программы:**
 ERROR: Unknown command: abc
 
----
 
 ### Тест 5. лишние аргументы
 **Шаги:**
@@ -125,7 +117,6 @@ ERROR: Unknown command: abc
 **Вывод программы:**
 ERROR: Too many arguments for command: list
 
----
 
 ### Тест 6. неверное число аргументов
 **Шаги:**
@@ -135,7 +126,6 @@ ERROR: Too many arguments for command: list
 ERROR: Invalid number of arguments for command: add
 ERROR: Usage: add/remove <path>
 
----
 
 ### Тест 7. несколько аргументов
 **Шаги:**
@@ -145,7 +135,6 @@ ERROR: Usage: add/remove <path>
 ERROR: Invalid number of arguments for command: add
 ERROR: Usage: add/remove <path>
 
----
 
 ### Тест 8. exit
 **Шаги:**
@@ -158,7 +147,6 @@ EVENT: File added: test.txt
 EVENT: File exists: test.txt, size: N bytes  
 INFO: Tracking started for 1 files  
 
----
 
 ### Тест 9. добавление существующего файла
 **Шаги:**
@@ -168,7 +156,6 @@ INFO: Tracking started for 1 files
 EVENT: File added: test.txt  
 EVENT: File exists: test.txt, size: N bytes  
 
----
 
 ### Тест 10. list после добавления
 **Шаги:**
@@ -178,8 +165,6 @@ EVENT: File exists: test.txt, size: N bytes
 **Вывод программы:**
 INFO: Tracked files (1):  
 INFO:   test.txt (exists, size: N bytes)
-
----
 
 ### Тест 11. запуск слежения
 **Шаги:**
@@ -191,7 +176,6 @@ EVENT: File added: test.txt
 EVENT: File exists: test.txt, size: N bytes 
 INFO: Tracking started for 1 files
 
----
 
 ### Тест 12. изменение файла
 **Шаги:**
@@ -202,7 +186,6 @@ INFO: Tracking started for 1 files
 **Вывод программы:**
 EVENT: File modified: test.txt, size: N bytes
 
----
 
 ### Тест 13. удаление файла
 **Шаги:**
@@ -213,7 +196,6 @@ EVENT: File modified: test.txt, size: N bytes
 **Вывод программы:**
 EVENT: File does not exist: test.txt
 
----
 
 ### Тест 14. восстановление файла
 **Шаги:**
@@ -226,7 +208,6 @@ EVENT: File does not exist: test.txt
 EVENT: File does not exist: test.txt  
 EVENT: File exists: test.txt, size: N bytes  
 
----
 
 ### Тест 15. остановка
 **Шаги:**
@@ -238,7 +219,6 @@ EVENT: File exists: test.txt, size: N bytes
 INFO: Tracking started for 1 files  
 INFO: Tracking stopped  
 
----
 
 ### Тест 16. изменение одного файла
 **Шаги:**
@@ -250,8 +230,6 @@ INFO: Tracking stopped
 **Вывод программы:**
 EVENT: File modified: test1.txt, size: N bytes  
 
----
-
 ### Тест 17. удаление одного файла
 **Шаги:**
 1. Ввести команду `add test1.txt`
@@ -262,7 +240,6 @@ EVENT: File modified: test1.txt, size: N bytes
 **Вывод программы:**
 EVENT: File does not exist: test2.txt
 
----
 
 ### Тест 18. list с несколькими файлами
 **Шаги:**
@@ -275,7 +252,6 @@ INFO: Tracked files (2):
 INFO:   test1.txt (exists, size: N bytes)  
 INFO:   test2.txt (exists, size: N bytes)  
 
----
 
 ### Тест 19. повторное добавление
 **Шаги:**
@@ -285,7 +261,6 @@ INFO:   test2.txt (exists, size: N bytes)
 **Вывод программы:**
 EVENT: File already tracked: test.txt
 
----
 
 ### Тест 20. удаление несуществующего
 **Шаги:**
@@ -294,7 +269,6 @@ EVENT: File already tracked: test.txt
 **Вывод программы:**
 ERROR: File not found: test.txt
 
----
 
 ### Тест 21. путь к папке
 **Шаги:**
@@ -303,7 +277,6 @@ ERROR: File not found: test.txt
 **Вывод программы:**
 ERROR: The path is not a file: test_folder
 
----
 
 ### Тест 22. пустой путь
 **Шаги:**
@@ -312,16 +285,14 @@ ERROR: The path is not a file: test_folder
 **Вывод программы:**
 ERROR: Empty path
 
----
 
 ### Тест 23. путь с пробелами
 **Шаги:**
-1. Ввести команду `add C:/My Folder/test.txt`
+1. Ввести команду `add C:/My Folder.txt`
 
 **Вывод программы:**
 ERROR: Invalid number of arguments for command: add
 
----
 
 ### Тест 24. несуществующий файл
 **Шаги:**
@@ -331,7 +302,6 @@ ERROR: Invalid number of arguments for command: add
 EVENT: File added: nofile.txt  
 EVENT: File does not exist: nofile.txt  
 
----
 
 ### Тест 25. повторный start
 **Шаги:**
@@ -344,8 +314,6 @@ EVENT: File added: test.txt
 EVENT: File exists: test.txt, size: N bytes 
 INFO: Tracking started for 1 files  
 ERROR: Tracking already running  
-
----
 
 ### Тест 26. повторный stop
 **Шаги:**
@@ -374,7 +342,6 @@ EVENT: File exists: test.txt, size: N bytes
 INFO: Tracking started for 1 files 
 EVENT: File modified: test.txt, size: 0 bytes
 
----
 
 ### Тест 28. быстро удалить и создать
 **Шаги:**
@@ -387,7 +354,6 @@ EVENT: File modified: test.txt, size: 0 bytes
 EVENT: File does not exist: test.txt  
 EVENT: File exists: test.txt, size: N bytes  
 
----
 
 ### Тест 29. изменение без изменения размера
 **Шаги:**
@@ -398,7 +364,6 @@ EVENT: File exists: test.txt, size: N bytes
 **Вывод программы:**
 (сообщения отсутствуют)
 
----
 
 ### Тест 30. remove одного из нескольких во время слежения
 **Шаги:**
@@ -410,7 +375,6 @@ EVENT: File exists: test.txt, size: N bytes
 **Вывод программы:**
 EVENT: File removed: test1.txt
 
----
 
 ### Тест 32. переименование файла
 **Шаги:**
