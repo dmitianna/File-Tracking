@@ -1,0 +1,34 @@
+#ifndef TRACKEDFILE_H
+#define TRACKEDFILE_H
+
+#include <QObject>
+#include <QFileInfo>
+
+class TrackedFile : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit TrackedFile(const QString &filePath, QObject *parent = nullptr);
+
+    QString path() const { return m_filePath; }
+    bool exists() const { return m_exists; }
+    qint64 size() const { return m_fileSize; }
+
+    bool currentExists() const;
+    qint64 currentSize() const;
+
+    void checkForChanges();
+signals:
+    void fileCreated(const QString &path, qint64 size);
+    void fileModified(const QString &path, qint64 size);
+    void fileNotExists(const QString &path);
+
+private:
+    QString m_filePath;
+    bool m_exists;
+    qint64 m_fileSize;
+    QFileInfo m_fileInfo;
+};
+
+#endif // TRACKEDFILE_H
