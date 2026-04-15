@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
     cout << "  start         - start tracking\n";
     cout << "  stop          - stop tracking\n";
     cout << "  exit          - exit program\n\n";
+    cout << "  Note: paths with spaces are not supported";
 
     QThread workerThread;
     manager->moveToThread(&workerThread);
@@ -38,13 +39,39 @@ int main(int argc, char *argv[])
         QString line = cin.readLine().trimmed();
         if (line.isEmpty()) continue;
 
-        QString argument = line.section(' ', 1).trimmed();
-        QString command = line.section(' ', 0, 0).toLower();
+        QStringList parts = line.split(' ', Qt::SkipEmptyParts);
+
+        QString command = parts[0].toLower();
+        QString argument;
+
+        if (command == "list" || command == "start" || command == "stop" || command == "exit")
+        {
+            if (parts.size() > 1)
+            {
+                Logger::instance().logError("Too many arguments for command: " + command);
+                continue;
+            }
+        }
+
+        else if (command == "add" || command == "remove")
+        {
+            if (parts.size() != 2)
+            {
+                Logger::instance().logError("Invalid number of arguments for command: " + command);
+                continue;
+            }
+
+            argument = parts[1];
+        }
+        else
+        {
+            Logger::instance().logError("Unknown command: " + command);
+            continue;
+        }
 
         if (command == "exit")
         {
             QMetaObject::invokeMethod(manager,"shutdown",Qt::BlockingQueuedConnection);
-            QMetaObject::invokeMethod(manager, "destroyTrackedObjects", Qt::BlockingQueuedConnection);
             workerThread.quit();
             workerThread.wait();
             //Logger::instance().logInfo("Program finished");
@@ -81,10 +108,6 @@ int main(int argc, char *argv[])
         else if (command == "stop")
         {
             QMetaObject::invokeMethod(manager,"stopTracking",Qt::BlockingQueuedConnection);
-        }
-        else
-        {
-            Logger::instance().logError("Unknown command: " + command);
         }
     }
 

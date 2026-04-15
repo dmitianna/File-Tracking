@@ -12,7 +12,6 @@ FileManager::FileManager(QObject *parent)
     //Logger::instance().logInfo("FileManager created");
 }
 
-
 FileManager::~FileManager()
 {
     if(m_timer->isActive())
@@ -62,7 +61,7 @@ void FileManager::addFile(const QString &path)
     {
         if (m_files[i] && (m_files[i]->path() == normalizedPath))
         {
-            Logger::instance().logEvent("File already tracked: " + path);
+            Logger::instance().logEvent("File already tracked: " + normalizedPath);
             return;
         }
     }
@@ -77,10 +76,7 @@ void FileManager::addFile(const QString &path)
 
     if (file->exists())
     {
-        Logger::instance().logEvent(
-            QString("File exists: %1, size: %2 bytes")
-                .arg(file->path())
-                .arg(file->size()));
+        Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(file->path()).arg(file->size()));
     }
     else
     {
@@ -188,22 +184,18 @@ void FileManager::shutdown()
         m_timer->stop();
         m_tracking = false;
     }
-}
 
-void FileManager::destroyTrackedObjects()
-{
     for (int i = m_files.size() - 1; i >= 0; --i)
     {
         delete m_files.takeAt(i);
     }
+
     m_files.clear();
-    //Logger::instance().logInfo("Tracked files are deleted");
 }
 
 
 void FileManager::onFileCreated(const QString &path, qint64 size)
 {
-    QString message;
     if (size == 0)
     {
         Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes (empty)").arg(path).arg(size));
@@ -216,8 +208,7 @@ void FileManager::onFileCreated(const QString &path, qint64 size)
 
 void FileManager::onFileModified(const QString &path, qint64 size)
 {
-    Logger::instance().logEvent(QString("File changed: %1, new size: %2 bytes").arg(path).arg(size));
-    Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));
+    Logger::instance().logEvent(QString("File modified: %1, size: %2 bytes").arg(path).arg(size));
 }
 
 void FileManager::onFileNotExists(const QString &path)
