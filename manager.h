@@ -2,7 +2,7 @@
 #define FILEMANAGER_H
 
 #include <QObject>
-#include <QVector>
+#include <vector>
 #include <QPointer>
 #include <memory>
 #include "IRefresher.h"
@@ -40,7 +40,7 @@ private:
     ~FileManager();
     std::unique_ptr<IRefresher> m_refresher;
     QString normalizePath(const QString &path) const;
-    QVector<QPointer<TrackedFile>> m_files;
+    std::vector<std::unique_ptr<TrackedFile>> m_files;
 };
 
 #endif // FILEMANAGER_H

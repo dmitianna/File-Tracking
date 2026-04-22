@@ -8,7 +8,7 @@ class TrackedFile : public QObject
     Q_OBJECT
 
 public:
-    explicit TrackedFile(const QString &filePath, QObject *parent = nullptr);
+    explicit TrackedFile(const QString &filePath);
 
     QString path() const { return m_filePath; }
     bool exists() const { return m_exists; }

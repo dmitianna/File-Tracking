@@ -1,6 +1,6 @@
 #include "trackedfile.h"
 
-TrackedFile::TrackedFile(const QString &filePath, QObject *parent): QObject(parent), m_filePath(filePath), m_exists(false), m_fileSize(0)
+TrackedFile::TrackedFile(const QString &filePath): QObject(nullptr), m_filePath(filePath), m_exists(false), m_fileSize(0)
 {
 }
 
