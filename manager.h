@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <vector>
-#include <QPointer>
 #include <memory>
 #include "IRefresher.h"
 #include "trackedfile.h"

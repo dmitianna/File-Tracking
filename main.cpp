@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     QTextStream cin(stdin);
     QTextStream cout(stdout);
 
-    FileManager *manager = new FileManager;
+    FileManager *manager = &FileManager::instance();
 
     cout << "=== File Tracking System ===\n";
     cout << "Commands:\n";
@@ -25,8 +25,6 @@ int main(int argc, char *argv[])
 
     QThread workerThread;
     manager->moveToThread(&workerThread);
-    QObject::connect(&workerThread, &QThread::finished,
-                     manager, &QObject::deleteLater);
     workerThread.start();
 
     while (true)
