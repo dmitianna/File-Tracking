@@ -1,24 +1,38 @@
-#include "fileentity.h"
+#include "trackedfile.h"
 
-TrackedFile::TrackedFile(const QString &filePath, QObject *parent): QObject(parent)
-    , m_filePath(filePath)
-    , m_exists(false)
-    , m_fileSize(0)
-    , m_fileInfo(filePath)
+TrackedFile::TrackedFile(const QString &filePath, QObject *parent): QObject(parent), m_filePath(filePath), m_exists(false), m_fileSize(0), m_fileInfo(filePath)
 {
     m_fileInfo.refresh();
 
-    if (m_fileInfo.exists())
+    if (m_fileInfo.exists() && m_fileInfo.isFile())
     {
         m_exists = true;
         m_fileSize = m_fileInfo.size();
     }
 }
 
+bool TrackedFile::currentExists() const
+{
+    QFileInfo info(m_filePath);
+    return info.exists() && info.isFile();
+}
+
+qint64 TrackedFile::currentSize() const
+{
+    QFileInfo info(m_filePath);
+
+    if (info.exists() && info.isFile())
+    {
+        return info.size();
+    }
+
+    return 0;
+}
+
 void TrackedFile::checkForChanges()
 {
     m_fileInfo.refresh();
-    bool nowExists = m_fileInfo.exists();
+    bool nowExists = m_fileInfo.exists() && m_fileInfo.isFile();
 
     if (!m_exists && nowExists)
     {
@@ -51,3 +65,4 @@ void TrackedFile::checkForChanges()
         }
     }
 }
+
