@@ -1,33 +1,17 @@
 #include <QTextStream>
-#include <QVector>
-#include <QFileInfo>
-#include <thread>
-#include <chrono>
-#include <atomic>
-#include "fileentity.h"
+#include <QCoreApplication>
+#include <QThread>
+
 #include "manager.h"
 #include "logger.h"
 
-std::atomic<bool> trackingActive(false);
-
-void trackingThreadFunction()
+int main(int argc, char *argv[])
 {
-    while (trackingActive)
-    {
-        for (TrackedFile* file : FileManager::instance().files())
-        {
-            file->checkForChanges();
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-}
-
-int main()
-{
+    QCoreApplication app(argc, argv);
     QTextStream cin(stdin);
     QTextStream cout(stdout);
 
-    Logger::instance().logInfo("Program started");
+    FileManager *manager = new FileManager;
 
     cout << "=== File Tracking System ===\n";
     cout << "Commands:\n";
@@ -36,81 +20,93 @@ int main()
     cout << "  list          - show all tracked files\n";
     cout << "  start         - start tracking\n";
     cout << "  stop          - stop tracking\n";
-    cout << "  exit          - exit program\n\n";
+    cout << "  exit          - exit program\n";
+    cout << "  Note: paths with spaces are not supported\n\n";
 
-    std::thread trackingThread;
+    QThread workerThread;
+    manager->moveToThread(&workerThread);
+    QObject::connect(&workerThread, &QThread::finished,
+                     manager, &QObject::deleteLater);
+    workerThread.start();
 
     while (true)
     {
         cout << "> ";
         cout.flush();
 
-        QString line = cin.readLine();
+        QString line = cin.readLine().trimmed();
         if (line.isEmpty()) continue;
 
         QStringList parts = line.split(' ', Qt::SkipEmptyParts);
-        QString command = parts[0].toLower();
 
-        if (command == "exit")
+        QString command = parts[0].toLower();
+        QString argument;
+
+        if (command == "list" || command == "start" || command == "stop" || command == "exit")
         {
-            if (trackingActive)
+            if (parts.size() > 1)
             {
-                trackingActive = false;
-                if (trackingThread.joinable())
-                    trackingThread.join();
+                Logger::instance().logError("Too many arguments for command: " + command);
+                continue;
             }
-            Logger::instance().logInfo("Program finished");
-            break;
         }
-        else if (command == "add" && parts.size() > 1)
+
+        else if (command == "add" || command == "remove")
         {
-            FileManager::instance().addFile(parts[1]);
-        }
-        else if (command == "remove" && parts.size() > 1)
-        {
-            FileManager::instance().removeFile(parts[1]);
-        }
-        else if (command == "list")
-        {
-            FileManager::instance().listFiles();
-        }
-        else if (command == "start")
-        {
-            if (FileManager::instance().fileCount() == 0)
+            if (parts.size() != 2)
             {
-                Logger::instance().logError("No files to track. Add files first.");
+                Logger::instance().logError("Invalid number of arguments for command: " + command);
+                Logger::instance().logError("Usage: add/remove <path>");
                 continue;
             }
 
-            if (!trackingActive)
-            {
-                trackingActive = true;
-                trackingThread = std::thread(trackingThreadFunction);
-                Logger::instance().logInfo("Tracking started for " +
-                                           QString::number(FileManager::instance().fileCount()) + " files");
-            }
-            else
-            {
-                Logger::instance().logError("Tracking already running");
-            }
-        }
-        else if (command == "stop")
-        {
-            if (trackingActive)
-            {
-                trackingActive = false;
-                if (trackingThread.joinable())
-                    trackingThread.join();
-                Logger::instance().logInfo("Tracking stopped");
-            }
-            else
-            {
-                Logger::instance().logError("Tracking is not running");
-            }
+            argument = parts[1];
         }
         else
         {
             Logger::instance().logError("Unknown command: " + command);
+            continue;
+        }
+
+        if (command == "exit")
+        {
+            QMetaObject::invokeMethod(manager,"shutdown",Qt::BlockingQueuedConnection);
+            workerThread.quit();
+            workerThread.wait();
+            //Logger::instance().logInfo("Program finished");
+            break;
+        }
+        else if (command == "add")
+        {
+            if (argument.isEmpty())
+            {
+                Logger::instance().logError("Usage: add <path>");
+                continue;
+            }
+
+            QMetaObject::invokeMethod(manager,"addFile",Qt::BlockingQueuedConnection,Q_ARG(QString, argument));
+        }
+        else if (command == "remove")
+        {
+            if (argument.isEmpty())
+            {
+                Logger::instance().logError("Usage: remove <path>");
+                continue;
+            }
+
+            QMetaObject::invokeMethod(manager,"removeFile",Qt::BlockingQueuedConnection,Q_ARG(QString, argument));
+        }
+        else if (command == "list")
+        {
+            QMetaObject::invokeMethod(manager,"listFiles",Qt::BlockingQueuedConnection);
+        }
+        else if (command == "start")
+        {
+            QMetaObject::invokeMethod(manager,"startTracking",Qt::BlockingQueuedConnection);
+        }
+        else if (command == "stop")
+        {
+            QMetaObject::invokeMethod(manager,"stopTracking",Qt::BlockingQueuedConnection);
         }
     }
 

@@ -1,5 +1,5 @@
-#ifndef FILEENTITY_H
-#define FILEENTITY_H
+#ifndef TRACKEDFILE_H
+#define TRACKEDFILE_H
 
 #include <QObject>
 #include <QFileInfo>
@@ -15,6 +15,9 @@ public:
     bool exists() const { return m_exists; }
     qint64 size() const { return m_fileSize; }
 
+    bool currentExists() const;
+    qint64 currentSize() const;
+
     void checkForChanges();
 signals:
     void fileCreated(const QString &path, qint64 size);
@@ -28,4 +31,4 @@ private:
     QFileInfo m_fileInfo;
 };
 
-#endif // FILEENTITY_H
+#endif // TRACKEDFILE_H
