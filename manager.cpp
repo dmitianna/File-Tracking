@@ -10,6 +10,12 @@ FileManager::FileManager(QObject *parent)
     m_timer->setInterval(100);
     connect(m_timer, &QTimer::timeout, this, &FileManager::checkAllFiles);
     //Logger::instance().logInfo("FileManager created");
+
+    connect(this, &FileManager::fileCreated,this, &FileManager::onFileCreated);
+
+    connect(this, &FileManager::fileModified,this, &FileManager::onFileModified);
+
+    connect(this, &FileManager::fileNotExists,this, &FileManager::onFileNotExists);
 }
 
 FileManager::~FileManager()
@@ -21,6 +27,13 @@ FileManager::~FileManager()
     m_files.clear();
     //Logger::instance().logInfo("FileManager destroyed");
 }
+
+FileManager& FileManager::instance()
+{
+    static FileManager instance;
+    return instance;
+}
+
 
 QString FileManager::normalizePath(const QString &path) const
 {
@@ -66,10 +79,15 @@ void FileManager::addFile(const QString &path)
         }
     }
     TrackedFile* file = new TrackedFile(normalizedPath, this);
-    connect(file, &TrackedFile::fileCreated,this, &FileManager::onFileCreated);
-    connect(file, &TrackedFile::fileModified,this, &FileManager::onFileModified);
-    connect(file, &TrackedFile::fileNotExists,this, &FileManager::onFileNotExists);
+    bool exists = info.exists() && info.isFile();
+    qint64 size = 0;
 
+    if (exists)
+    {
+        size = info.size();
+    }
+
+    file->setState(exists, size);
     m_files.append(QPointer<TrackedFile>(file));
 
     Logger::instance().logEvent("File added: " + normalizedPath);
@@ -121,9 +139,12 @@ void FileManager::listFiles()
             continue;
         }
         TrackedFile *file = m_files[i];
-        if (file->currentExists())
+        QFileInfo info(file->path());
+        bool exists = info.exists() && info.isFile();
+
+        if (exists)
         {
-            Logger::instance().logInfo(QString("  %1 (exists, size: %2 bytes)").arg(file->path()).arg(file->currentSize()));
+            Logger::instance().logInfo(QString("  %1 (exists, size: %2 bytes)").arg(file->path()).arg(info.size()));
         }
         else
         {
@@ -174,11 +195,45 @@ void FileManager::checkAllFiles()
         if (!m_files[i])
         {
             m_files.removeAt(i);
+            continue;
         }
-        else
+
+        TrackedFile *file = m_files[i];
+
+        bool oldExists = file->exists();
+        qint64 oldSize = file->size();
+
+        QFileInfo info(file->path());
+        bool newExists = info.exists() && info.isFile();
+        qint64 newSize = 0;
+
+        if (newExists)
         {
-            m_files[i]->checkForChanges();
+            newSize = info.size();
         }
+
+        if (!oldExists && newExists)
+        {
+            file->setState(newExists, newSize);
+            emit fileCreated(file->path(), newSize);
+            continue;
+        }
+
+        if (oldExists && !newExists)
+        {
+            file->setState(newExists, newSize);
+            emit fileNotExists(file->path());
+            continue;
+        }
+
+        if (oldExists && newExists && oldSize != newSize)
+        {
+            file->setState(newExists, newSize);
+            emit fileModified(file->path(), newSize);
+            continue;
+        }
+
+        file->setState(newExists, newSize);
     }
 }
 

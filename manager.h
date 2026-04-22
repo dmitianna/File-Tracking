@@ -12,8 +12,10 @@ class FileManager : public QObject
     Q_OBJECT
 
 public:
-    explicit FileManager(QObject *parent = nullptr);
-    ~FileManager();
+    static FileManager& instance();
+
+    FileManager(const FileManager&) = delete;
+    FileManager& operator=(const FileManager&) = delete;
 
 public slots:
     void addFile(const QString &path);
@@ -21,6 +23,10 @@ public slots:
     void listFiles();
     void startTracking();
     void stopTracking();
+signals:
+    void fileCreated(const QString &path, qint64 size);
+    void fileModified(const QString &path, qint64 size);
+    void fileNotExists(const QString &path);
 private slots:
     void checkAllFiles();
     void shutdown();
@@ -29,6 +35,9 @@ private slots:
     void onFileNotExists(const QString &path);
 
 private:
+    explicit FileManager(QObject *parent = nullptr);
+    ~FileManager();
+
     QString normalizePath(const QString &path) const;
     QVector<QPointer<TrackedFile>> m_files;
     QTimer *m_timer;
