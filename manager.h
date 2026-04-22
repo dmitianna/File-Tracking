@@ -2,9 +2,10 @@
 #define FILEMANAGER_H
 
 #include <QObject>
-#include <QVector>
-#include <QTimer>
+#include <vector>
 #include <QPointer>
+#include <memory>
+#include "IRefresher.h"
 #include "trackedfile.h"
 
 class FileManager : public QObject
@@ -24,24 +25,22 @@ public slots:
     void startTracking();
     void stopTracking();
 signals:
-    void fileCreated(const QString &path, qint64 size);
+    void fileExists(const QString &path, qint64 size);
     void fileModified(const QString &path, qint64 size);
     void fileNotExists(const QString &path);
 private slots:
     void checkAllFiles();
     void shutdown();
-    void onFileCreated(const QString &path, qint64 size);
+    void onFileExists(const QString &path, qint64 size);
     void onFileModified(const QString &path, qint64 size);
     void onFileNotExists(const QString &path);
 
 private:
     explicit FileManager(QObject *parent = nullptr);
     ~FileManager();
-
+    std::unique_ptr<IRefresher> m_refresher;
     QString normalizePath(const QString &path) const;
-    QVector<QPointer<TrackedFile>> m_files;
-    QTimer *m_timer;
-    bool m_tracking;
+    std::vector<std::unique_ptr<TrackedFile>> m_files;
 };
 
 #endif // FILEMANAGER_H
