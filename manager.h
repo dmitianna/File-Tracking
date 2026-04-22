@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QVector>
-#include <QTimer>
 #include <QPointer>
 #include "trackedfile.h"
 
@@ -40,8 +39,6 @@ private:
 
     QString normalizePath(const QString &path) const;
     QVector<QPointer<TrackedFile>> m_files;
-    QTimer *m_timer;
-    bool m_tracking;
 };
 
 #endif // FILEMANAGER_H

@@ -2,13 +2,8 @@
 #include "logger.h"
 #include <QDir>
 
-FileManager::FileManager(QObject *parent)
-    : QObject(parent)
-    , m_timer(new QTimer(this))
-    , m_tracking(false)
+FileManager::FileManager(QObject *parent): QObject(parent)
 {
-    m_timer->setInterval(100);
-    connect(m_timer, &QTimer::timeout, this, &FileManager::checkAllFiles);
     //Logger::instance().logInfo("FileManager created");
 
     connect(this, &FileManager::fileCreated,this, &FileManager::onFileCreated);
@@ -20,10 +15,6 @@ FileManager::FileManager(QObject *parent)
 
 FileManager::~FileManager()
 {
-    if(m_timer->isActive())
-    {
-        m_timer->stop();
-    }
     m_files.clear();
     //Logger::instance().logInfo("FileManager destroyed");
 }
@@ -167,9 +158,6 @@ void FileManager::startTracking()
         return;
     }
 
-    m_timer->start();
-    m_tracking = true;
-
     Logger::instance().logInfo(
         "Tracking started for " + QString::number(m_files.size()) + " files");
 }
@@ -181,9 +169,6 @@ void FileManager::stopTracking()
         Logger::instance().logError("Tracking is not running");
         return;
     }
-
-    m_timer->stop();
-    m_tracking = false;
 
     Logger::instance().logInfo("Tracking stopped");
 }
@@ -239,11 +224,6 @@ void FileManager::checkAllFiles()
 
 void FileManager::shutdown()
 {
-    if (m_tracking)
-    {
-        m_timer->stop();
-        m_tracking = false;
-    }
 
     for (int i = m_files.size() - 1; i >= 0; --i)
     {
