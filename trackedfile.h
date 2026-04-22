@@ -2,7 +2,6 @@
 #define TRACKEDFILE_H
 
 #include <QObject>
-#include <QFileInfo>
 
 class TrackedFile : public QObject
 {
@@ -20,7 +19,6 @@ private:
     QString m_filePath;
     bool m_exists;
     qint64 m_fileSize;
-    QFileInfo m_fileInfo;
 };
 
 #endif // TRACKEDFILE_H
