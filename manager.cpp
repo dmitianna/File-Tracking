@@ -6,7 +6,7 @@ FileManager::FileManager(QObject *parent): QObject(parent)
 {
     //Logger::instance().logInfo("FileManager created");
 
-    connect(this, &FileManager::fileCreated,this, &FileManager::onFileCreated);
+    connect(this, &FileManager::fileExists,this, &FileManager::onFileExists);
 
     connect(this, &FileManager::fileModified,this, &FileManager::onFileModified);
 
@@ -200,7 +200,7 @@ void FileManager::checkAllFiles()
         if (!oldExists && newExists)
         {
             file->setState(newExists, newSize);
-            emit fileCreated(file->path(), newSize);
+            emit fileExists(file->path(), newSize);
             continue;
         }
 
@@ -234,16 +234,9 @@ void FileManager::shutdown()
 }
 
 
-void FileManager::onFileCreated(const QString &path, qint64 size)
+void FileManager::onFileExists(const QString &path, qint64 size)
 {
-    if (size == 0)
-    {
-        Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes (empty)").arg(path).arg(size));
-    }
-    else
-    {
-        Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));
-    }
+    Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));
 }
 
 void FileManager::onFileModified(const QString &path, qint64 size)
