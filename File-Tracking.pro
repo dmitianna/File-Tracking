@@ -6,6 +6,7 @@ SOURCES += \
         logger.cpp \
         main.cpp \
         manager.cpp \
+        timerefresher.cpp \
         trackedfile.cpp
 
 # Default rules for deployment.
@@ -14,6 +15,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
+    IRefresher.h \
     logger.h \
     manager.h \
+    timerefresher.h \
     trackedfile.h

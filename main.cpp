@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     QTextStream cin(stdin);
     QTextStream cout(stdout);
 
-    FileManager *manager = new FileManager;
+    FileManager *manager = &FileManager::instance();
 
     cout << "=== File Tracking System ===\n";
     cout << "Commands:\n";
@@ -21,19 +21,16 @@ int main(int argc, char *argv[])
     cout << "  start         - start tracking\n";
     cout << "  stop          - stop tracking\n";
     cout << "  exit          - exit program\n";
-    cout << "  Note: paths with spaces are not supported\n\n";
-
+    cout << "Note: paths with spaces are not supported\n\n";
+    cout.flush();
     QThread workerThread;
     manager->moveToThread(&workerThread);
-    QObject::connect(&workerThread, &QThread::finished,
-                     manager, &QObject::deleteLater);
+    QObject::connect(&workerThread, &QThread::finished,manager, &FileManager::shutdown);
+
     workerThread.start();
 
     while (true)
     {
-        cout << "> ";
-        cout.flush();
-
         QString line = cin.readLine().trimmed();
         if (line.isEmpty()) continue;
 

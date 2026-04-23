@@ -1,68 +1,20 @@
 #include "trackedfile.h"
 
-TrackedFile::TrackedFile(const QString &filePath, QObject *parent): QObject(parent), m_filePath(filePath), m_exists(false), m_fileSize(0), m_fileInfo(filePath)
+TrackedFile::TrackedFile(const QString &filePath): m_filePath(filePath), m_exists(false), m_fileSize(0)
 {
-    m_fileInfo.refresh();
-
-    if (m_fileInfo.exists() && m_fileInfo.isFile())
-    {
-        m_exists = true;
-        m_fileSize = m_fileInfo.size();
-    }
 }
 
-bool TrackedFile::currentExists() const
+void TrackedFile::setState(bool exists, qint64 size)
 {
-    QFileInfo info(m_filePath);
-    return info.exists() && info.isFile();
-}
+    m_exists = exists;
 
-qint64 TrackedFile::currentSize() const
-{
-    QFileInfo info(m_filePath);
-
-    if (info.exists() && info.isFile())
+    if (m_exists)
     {
-        return info.size();
+        m_fileSize = size;
     }
-
-    return 0;
-}
-
-void TrackedFile::checkForChanges()
-{
-    m_fileInfo.refresh();
-    bool nowExists = m_fileInfo.exists() && m_fileInfo.isFile();
-
-    if (!m_exists && nowExists)
+    else
     {
-        qint64 newSize = m_fileInfo.size();
-
-        m_exists = true;
-        m_fileSize = newSize;
-
-        emit fileCreated(m_filePath, newSize);
-        return;
-    }
-
-    if (m_exists && !nowExists)
-    {
-        m_exists = false;
         m_fileSize = 0;
-
-        emit fileNotExists(m_filePath);
-        return;
-    }
-
-    if (m_exists && nowExists)
-    {
-        qint64 newSize = m_fileInfo.size();
-
-        if (m_fileSize != newSize)
-        {
-            m_fileSize = newSize;
-            emit fileModified(m_filePath, newSize);
-        }
     }
 }
 
