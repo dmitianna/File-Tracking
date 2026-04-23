@@ -7,10 +7,11 @@ FileManager::FileManager(QObject *parent): QObject(parent)
 {
     //Logger::instance().logInfo("FileManager created");
 
-    auto refresher = std::make_unique<TimeRefresher>();
+    TimeRefresher *refresher = new TimeRefresher(this);
     refresher->setInterval(100);
-    connect(refresher.get(), &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
-    m_refresher = std::move(refresher);
+    connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
+    m_refresher = refresher;
+
 
     connect(this, &FileManager::fileExists,this, &FileManager::onFileExists);
     connect(this, &FileManager::fileModified,this, &FileManager::onFileModified);
@@ -19,8 +20,7 @@ FileManager::FileManager(QObject *parent): QObject(parent)
 
 FileManager::~FileManager()
 {
-    m_files.clear();
-    //Logger::instance().logInfo("FileManager destroyed");
+    shutdown();
 }
 
 FileManager& FileManager::instance()
@@ -45,8 +45,7 @@ QString FileManager::normalizePath(const QString &path) const
             normalized = normalized.mid(1, normalized.length() - 2).trimmed();
         }
     }
-
-    return QDir::fromNativeSeparators(normalized);
+    return QDir::cleanPath(QDir::fromNativeSeparators(normalized));
 }
 
 void FileManager::addFile(const QString &path)
@@ -175,12 +174,12 @@ void FileManager::checkAllFiles()
 {
     for (std::size_t i = 0; i < m_files.size(); ++i)
     {
-        TrackedFile *file = m_files[i].get();
+        TrackedFile &file = *m_files[i];
 
-        bool oldExists = file->exists();
-        qint64 oldSize = file->size();
+        bool oldExists = file.exists();
+        qint64 oldSize = file.size();
 
-        QFileInfo info(file->path());
+        QFileInfo info(file.path());
         bool newExists = info.exists() && info.isFile();
         qint64 newSize = 0;
 
@@ -191,36 +190,43 @@ void FileManager::checkAllFiles()
 
         if (!oldExists && newExists)
         {
-            file->setState(newExists, newSize);
-            emit fileExists(file->path(), newSize);
+            file.setState(newExists, newSize);
+            emit fileExists(file.path(), newSize);
             continue;
         }
 
         if (oldExists && !newExists)
         {
-            file->setState(newExists, newSize);
-            emit fileNotExists(file->path());
+            file.setState(newExists, newSize);
+            emit fileNotExists(file.path());
             continue;
         }
 
         if (oldExists && newExists && oldSize != newSize)
         {
-            file->setState(newExists, newSize);
-            emit fileModified(file->path(), newSize);
+            file.setState(newExists, newSize);
+            emit fileModified(file.path(), newSize);
             continue;
         }
 
-        file->setState(newExists, newSize);
+        if (oldExists != newExists || oldSize != newSize)
+        {
+            file.setState(newExists, newSize);
+        }
     }
 }
 
 void FileManager::shutdown()
 {
+    if (m_isShutdown) return;
+
     if (m_refresher && m_refresher->isRunning())
     {
         m_refresher->stop();
     }
+
     m_files.clear();
+    m_isShutdown = true;
 }
 
 

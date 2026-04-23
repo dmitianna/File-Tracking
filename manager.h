@@ -23,13 +23,13 @@ public slots:
     void listFiles();
     void startTracking();
     void stopTracking();
+    void shutdown();
 signals:
     void fileExists(const QString &path, qint64 size);
     void fileModified(const QString &path, qint64 size);
     void fileNotExists(const QString &path);
 private slots:
     void checkAllFiles();
-    void shutdown();
     void onFileExists(const QString &path, qint64 size);
     void onFileModified(const QString &path, qint64 size);
     void onFileNotExists(const QString &path);
@@ -37,9 +37,10 @@ private slots:
 private:
     explicit FileManager(QObject *parent = nullptr);
     ~FileManager();
-    std::unique_ptr<IRefresher> m_refresher;
+    IRefresher *m_refresher;
     QString normalizePath(const QString &path) const;
     std::vector<std::unique_ptr<TrackedFile>> m_files;
+    bool m_isShutdown = false;
 };
 
 #endif // FILEMANAGER_H
