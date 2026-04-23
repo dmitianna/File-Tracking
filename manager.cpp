@@ -6,8 +6,11 @@
 FileManager::FileManager(QObject *parent): QObject(parent)
 {
     //Logger::instance().logInfo("FileManager created");
-
     TimeRefresher *refresher = new TimeRefresher(this);
+    if (!refresher)
+    {
+        Logger::instance().logError("Timer is not created. Tracking functional is not available; Restart the utily");
+    }
     refresher->setInterval(100);
     connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
     m_refresher = refresher;
@@ -50,6 +53,12 @@ QString FileManager::normalizePath(const QString &path) const
 
 void FileManager::addFile(const QString &path)
 {
+    if (!m_refresher)
+    {
+        Logger::instance().logError(
+            "Timer is not created. Tracking functionality is not available. Restart the utility.");
+        return;
+    }
     QString normalizedPath = normalizePath(path);
     if(normalizedPath.isEmpty())
     {
@@ -161,6 +170,12 @@ void FileManager::startTracking()
 
 void FileManager::stopTracking()
 {
+    if (!m_refresher)
+    {
+        Logger::instance().logError(
+            "Timer is not created. Tracking functionality is not available. Restart the utility.");
+        return;
+    }
     if (!m_refresher->isRunning())
     {
         Logger::instance().logError("Tracking is not running");
