@@ -1,12 +1,10 @@
 #ifndef TRACKEDFILE_H
 #define TRACKEDFILE_H
 
-#include <QObject>
+#include <QString>
 
-class TrackedFile : public QObject
+class TrackedFile
 {
-    Q_OBJECT
-
 public:
     explicit TrackedFile(const QString &filePath);
 
