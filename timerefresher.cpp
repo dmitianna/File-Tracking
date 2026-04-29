@@ -1,6 +1,6 @@
 #include "timerefresher.h"
 
-TimeRefresher::TimeRefresher(QObject *parent): QObject(parent)
+TimeRefresher::TimeRefresher(QObject *parent): QObject(parent), m_timer(this)
 {
     connect(&m_timer, &QTimer::timeout,this, &TimeRefresher::refreshRequested);
 }
@@ -22,5 +22,9 @@ bool TimeRefresher::isRunning() const
 
 void TimeRefresher::setInterval(int interval)
 {
+    if (interval <= 0)
+    {
+        interval = 100;
+    }
     m_timer.setInterval(interval);
 }
