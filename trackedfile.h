@@ -1,14 +1,12 @@
 #ifndef TRACKEDFILE_H
 #define TRACKEDFILE_H
 
-#include <QObject>
+#include <QString>
 
-class TrackedFile : public QObject
+class TrackedFile
 {
-    Q_OBJECT
-
 public:
-    explicit TrackedFile(const QString &filePath, QObject *parent = nullptr);
+    explicit TrackedFile(const QString &filePath);
 
     QString path() const { return m_filePath; }
     bool exists() const { return m_exists; }
