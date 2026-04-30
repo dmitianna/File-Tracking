@@ -16,6 +16,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     IRefresher.h \
+    fileinfo.h \
     logger.h \
     manager.h \
     timerefresher.h \
