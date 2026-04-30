@@ -3,19 +3,20 @@
 #include "timerefresher.h"
 #include <QDir>
 
-FileManager::FileManager(QObject *parent): QObject(parent)
+FileManager::FileManager(QObject *parent): QObject(parent), m_refresher(nullptr)
 {
     //Logger::instance().logInfo("FileManager created");
     TimeRefresher *refresher = new TimeRefresher(this);
     if (!refresher)
     {
-        Logger::instance().logError("Timer is not created. Tracking functional is not available; Restart the utily");
+        Logger::instance().logError("Refresher is not available. Tracking disabled.");
     }
-    refresher->setInterval(100);
-    connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
-    m_refresher = refresher;
-
-
+    else
+    {
+        refresher->setInterval(100);
+        connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
+        m_refresher = refresher;
+    }
     connect(this, &FileManager::fileExists,this, &FileManager::onFileExists);
     connect(this, &FileManager::fileModified,this, &FileManager::onFileModified);
     connect(this, &FileManager::fileNotExists,this, &FileManager::onFileNotExists);
@@ -24,6 +25,7 @@ FileManager::FileManager(QObject *parent): QObject(parent)
 FileManager::~FileManager()
 {
     shutdown();
+    Logger::instance().logInfo("FileManger is shutdown");
 }
 
 FileManager& FileManager::instance()
@@ -55,8 +57,7 @@ void FileManager::addFile(const QString &path)
 {
     if (!m_refresher)
     {
-        Logger::instance().logError(
-            "Timer is not created. Tracking functionality is not available. Restart the utility.");
+        Logger::instance().logError("Tracking functionality is not available.");
         return;
     }
     QString normalizedPath = normalizePath(path);
@@ -81,7 +82,7 @@ void FileManager::addFile(const QString &path)
             return;
         }
     }
-    auto file = std::make_unique<TrackedFile>(normalizedPath);
+    std::unique_ptr<TrackedFile> file(new TrackedFile(normalizedPath));
     bool exists = info.exists() && info.isFile();
     qint64 size = 0;
 
@@ -115,7 +116,7 @@ void FileManager::removeFile(const QString &path)
             m_files.erase(it);
             Logger::instance().logEvent("File removed: " + normalizedPath);
 
-            if (m_files.empty() && m_refresher->isRunning())
+            if (m_files.empty() && m_refresher && m_refresher->isRunning())
             {
                 stopTracking();
             }
@@ -127,32 +128,32 @@ void FileManager::removeFile(const QString &path)
     Logger::instance().logError("File not found: " + normalizedPath);
 }
 
-void FileManager::listFiles()
+QVector<FileInfo> FileManager::getFiles() const
 {
-    if (m_files.empty())
+    QVector<FileInfo> result;
+    for (const auto& file : m_files)
     {
-        Logger::instance().logInfo("No files being tracked");
-        return;
-    }
-    Logger::instance().logInfo("Tracked files (" + QString::number(m_files.size()) + "):");
+        QFileInfo info(file->path());
 
-    for (std::size_t i = 0; i < m_files.size(); ++i)
-    {
-        QFileInfo info(m_files[i]->path());
         bool exists = info.exists() && info.isFile();
+        qint64 size = 0;
         if (exists)
         {
-            Logger::instance().logInfo(QString("  %1 (exists, size: %2 bytes)").arg(m_files[i]->path()).arg(info.size()));
+            size = info.size();
         }
-        else
-        {
-            Logger::instance().logInfo(QString("  %1 (does not exist)").arg(m_files[i]->path()));
-        }
+        result.append({ file->path(), exists, size });
     }
+    return result;
 }
 
 void FileManager::startTracking()
 {
+    if (!m_refresher)
+    {
+        Logger::instance().logError("Cannot start tracking: refresher not initialized");
+        return;
+    }
+
     if (m_files.empty())
     {
         Logger::instance().logError("No files to track. Add files first.");
@@ -172,8 +173,7 @@ void FileManager::stopTracking()
 {
     if (!m_refresher)
     {
-        Logger::instance().logError(
-            "Timer is not created. Tracking functionality is not available. Restart the utility.");
+        Logger::instance().logError("Internal error: refresher is not initialized");
         return;
     }
     if (!m_refresher->isRunning())
@@ -223,11 +223,6 @@ void FileManager::checkAllFiles()
             emit fileModified(file.path(), newSize);
             continue;
         }
-
-        if (oldExists != newExists || oldSize != newSize)
-        {
-            file.setState(newExists, newSize);
-        }
     }
 }
 
@@ -239,7 +234,6 @@ void FileManager::shutdown()
     {
         m_refresher->stop();
     }
-
     m_files.clear();
     m_isShutdown = true;
 }
