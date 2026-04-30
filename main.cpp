@@ -1,19 +1,15 @@
 #include <QTextStream>
 #include <QCoreApplication>
-#include <QThread>
+
+#include <atomic>
+#include <thread>
 
 #include "manager.h"
 #include "logger.h"
 
-int main(int argc, char *argv[])
+static void printHelp()
 {
-    QCoreApplication app(argc, argv);
-    QTextStream cin(stdin);
     QTextStream cout(stdout);
-
-    Logger::instance().logInfo("Program started");
-
-    FileManager *manager = new FileManager;
 
     cout << "=== File Tracking System ===\n";
     cout << "Commands:\n";
@@ -22,70 +18,84 @@ int main(int argc, char *argv[])
     cout << "  list          - show all tracked files\n";
     cout << "  start         - start tracking\n";
     cout << "  stop          - stop tracking\n";
-    cout << "  exit          - exit program\n\n";
+    cout << "  exit          - exit program\n";
+    cout << "Note: paths with spaces are not supported\n\n";
+    cout.flush();
+}
 
-    QThread workerThread;
-    manager->moveToThread(&workerThread);
-    QObject::connect(&workerThread, &QThread::finished,
-                     manager, &QObject::deleteLater);
-    workerThread.start();
+void handleCommand(const QString &input)
+{
+    QString line = input.trimmed();
+    if (line.isEmpty())
+        return;
 
-    while (true)
+    FileManager &manager = FileManager::instance();
+
+    QStringList parts = line.split(' ', Qt::SkipEmptyParts);
+    QString command = parts[0].toLower();
+    QString argument;
+
+    if ((command == "list" || command == "start" || command == "stop" || command == "exit") && parts.size() > 1)
     {
-        cout << "> ";
-        cout.flush();
-
-        QString line = cin.readLine().trimmed();
-        if (line.isEmpty()) continue;
-
-        QString argument = line.section(' ', 1).trimmed();
-        QString command = line.section(' ', 0, 0).toLower();
-
-        if (command == "exit")
-        {
-            QMetaObject::invokeMethod(manager,"shutdown",Qt::BlockingQueuedConnection);
-            workerThread.quit();
-            workerThread.wait();
-            Logger::instance().logInfo("Program finished");
-            break;
-        }
-        else if (command == "add")
-        {
-            if (argument.isEmpty())
-            {
-                Logger::instance().logError("Usage: add <path>");
-                continue;
-            }
-
-            QMetaObject::invokeMethod(manager,"addFile",Qt::QueuedConnection,Q_ARG(QString, argument));
-        }
-        else if (command == "remove")
-        {
-            if (argument.isEmpty())
-            {
-                Logger::instance().logError("Usage: remove <path>");
-                continue;
-            }
-
-            QMetaObject::invokeMethod(manager,"removeFile",Qt::QueuedConnection,Q_ARG(QString, argument));
-        }
-        else if (command == "list")
-        {
-            QMetaObject::invokeMethod(manager,"listFiles",Qt::QueuedConnection);
-        }
-        else if (command == "start")
-        {
-            QMetaObject::invokeMethod(manager,"startTracking",Qt::QueuedConnection);
-        }
-        else if (command == "stop")
-        {
-            QMetaObject::invokeMethod(manager,"stopTracking",Qt::QueuedConnection);
-        }
-        else
-        {
-            Logger::instance().logError("Unknown command: " + command);
-        }
+        Logger::instance().logError("Too many arguments for command: " + command);
+        return;
     }
 
-    return 0;
+    if ((command == "add" || command == "remove") && parts.size() != 2)
+    {
+        Logger::instance().logError("Invalid number of arguments for command: " + command);
+        Logger::instance().logError("Usage: add/remove <path>");
+        return;
+    }
+
+    if (command == "add" || command == "remove")
+        argument = parts[1];
+
+    if (command == "add") manager.addFile(argument);
+    else if (command == "remove") manager.removeFile(argument);
+    else if (command == "list") manager.listFiles();
+    else if (command == "start") manager.startTracking();
+    else if (command == "stop") manager.stopTracking();
+    else if (command == "exit")
+    {
+        QCoreApplication::quit();
+    }
+    else
+    {
+        Logger::instance().logError("Unknown command: " + command);
+    }
+}
+int main(int argc, char *argv[])
+{
+    QCoreApplication app(argc, argv);
+    printHelp();
+
+    std::atomic_bool running = true;
+    std::thread consoleThread([&running]()
+    {
+    QTextStream cin(stdin);
+
+    while (running)
+    {
+        QString line = cin.readLine();
+        // EOF (Ctrl+D / Ctrl+Z)
+        if (line.isNull()){
+            QMetaObject::invokeMethod(qApp,&QCoreApplication::quit,Qt::QueuedConnection);
+            running = false;
+            break;
+        }
+
+        QString cmd = line.trimmed().toLower();
+        QMetaObject::invokeMethod(qApp,[line](){handleCommand(line);},Qt::QueuedConnection);
+
+        if (cmd == "exit") running = false;
+    }
+    });
+
+    int result = app.exec();
+
+    running = false;
+
+    if (consoleThread.joinable()) consoleThread.join();
+    return result;
 }

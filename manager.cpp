@@ -1,197 +1,255 @@
 #include "manager.h"
 #include "logger.h"
+#include "timerefresher.h"
+#include <QDir>
 
-FileManager::FileManager(QObject *parent)
-    : QObject(parent)
-    , m_timer(new QTimer(this))
-    , m_tracking(false)
+FileManager::FileManager(QObject *parent): QObject(parent), m_refresher(nullptr)
 {
-    m_timer->setInterval(100);
-    connect(m_timer, &QTimer::timeout, this, &FileManager::checkAllFiles);
-    Logger::instance().logInfo("FileManager created");
+    //Logger::instance().logInfo("FileManager created");
+    TimeRefresher *refresher = new TimeRefresher(this);
+    if (!refresher)
+    {
+        Logger::instance().logError("Refresher is not available. Tracking disabled.");
+    }
+    else
+    {
+        refresher->setInterval(100);
+        connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
+        m_refresher = refresher;
+    }
+    connect(this, &FileManager::fileExists,this, &FileManager::onFileExists);
+    connect(this, &FileManager::fileModified,this, &FileManager::onFileModified);
+    connect(this, &FileManager::fileNotExists,this, &FileManager::onFileNotExists);
 }
-
 
 FileManager::~FileManager()
 {
-    if(m_timer->isActive())
-    {
-        m_timer->stop();
-    }
-    /*for (int i = 0; i < m_files.size(); ++i)
-    {
-        delete m_files[i];
-    }
-    */
-    qDeleteAll(m_files);
-    m_files.clear();
-    Logger::instance().logInfo("FileManager destroyed");
+    shutdown();
+    Logger::instance().logInfo("FileManger is shutdown");
+}
+
+FileManager& FileManager::instance()
+{
+    static FileManager instance;
+    return instance;
 }
 
 
+QString FileManager::normalizePath(const QString &path) const
+{
+    QString normalized = path.trimmed();
+
+    if (normalized.length() >= 2)
+    {
+        const QChar first = normalized.front();
+        const QChar last = normalized.back();
+
+        if ((first == '"' && last == '"') ||
+            (first == '\'' && last == '\''))
+        {
+            normalized = normalized.mid(1, normalized.length() - 2).trimmed();
+        }
+    }
+    return QDir::cleanPath(QDir::fromNativeSeparators(normalized));
+}
+
 void FileManager::addFile(const QString &path)
 {
-    QString normalizedPath = path.trimmed();
+    if (!m_refresher)
+    {
+        Logger::instance().logError("Tracking functionality is not available.");
+        return;
+    }
+    QString normalizedPath = normalizePath(path);
     if(normalizedPath.isEmpty())
     {
         Logger::instance().logError("Empty path");
         return;
     }
 
-    for (int i = 0; i < m_files.size(); ++i)
+    QFileInfo info(normalizedPath);
+    if (info.exists() && !info.isFile())
     {
-        if (m_files[i]->path() == normalizedPath)
+        Logger::instance().logError("The path is not a file: " + normalizedPath);
+        return;
+    }
+
+    for (std::size_t i = 0; i < m_files.size(); ++i)
+    {
+        if (m_files[i] && (m_files[i]->path() == normalizedPath))
         {
-            Logger::instance().logEvent("File already tracked: " + path);
+            Logger::instance().logEvent("File already tracked: " + normalizedPath);
             return;
         }
     }
+    std::unique_ptr<TrackedFile> file(new TrackedFile(normalizedPath));
+    bool exists = info.exists() && info.isFile();
+    qint64 size = 0;
 
-    TrackedFile* file = new TrackedFile(normalizedPath, this);
+    if (exists)
+    {
+        size = info.size();
+    }
 
-    QFileInfo info(normalizedPath);
-    connect(file, &TrackedFile::fileCreated,this, &FileManager::onFileCreated);
-    connect(file, &TrackedFile::fileModified,this, &FileManager::onFileModified);
-    connect(file, &TrackedFile::fileNotExists,this, &FileManager::onFileNotExists);
-
-    m_files.append(file);
+    file->setState(exists, size);
+    m_files.push_back(std::move(file));
 
     Logger::instance().logEvent("File added: " + normalizedPath);
 
-    if (file->exists())
+    if (m_files.back()->exists())
     {
-        Logger::instance().logEvent(
-            QString("File exists: %1, size: %2 bytes")
-                .arg(file->path())
-                .arg(file->size()));
+        Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(m_files.back()->path()).arg(m_files.back()->size()));
     }
     else
     {
-        Logger::instance().logEvent(QString("File does not exist: %1").arg(file->path()));
+        Logger::instance().logEvent(QString("File does not exist: %1").arg(m_files.back()->path()));
     }
 }
 
 void FileManager::removeFile(const QString &path)
 {
-    QString normalizedPath = path.trimmed();
-    for (int i = 0; i < m_files.size(); ++i)
+    QString normalizedPath = normalizePath(path);
+    for (auto it = m_files.begin(); it != m_files.end(); ++it)
     {
-        if (m_files[i]->path() == normalizedPath)
+        if ((*it)->path() == normalizedPath)
         {
-            delete m_files.takeAt(i);
+            m_files.erase(it);
             Logger::instance().logEvent("File removed: " + normalizedPath);
+
+            if (m_files.empty() && m_refresher && m_refresher->isRunning())
+            {
+                stopTracking();
+            }
+
             return;
         }
     }
+
     Logger::instance().logError("File not found: " + normalizedPath);
 }
 
-void FileManager::listFiles()
+QVector<FileInfo> FileManager::getFiles() const
 {
-    if (m_files.isEmpty())
+    QVector<FileInfo> result;
+    for (const auto& file : m_files)
     {
-        Logger::instance().logInfo("No files being tracked");
-        return;
-    }
-    Logger::instance().logInfo(
-        "Tracked files (" + QString::number(m_files.size()) + "):");
+        QFileInfo info(file->path());
 
-    for (int i = 0; i < m_files.size(); ++i)
-    {
-        TrackedFile *file = m_files[i];
-        if (file->exists())
+        bool exists = info.exists() && info.isFile();
+        qint64 size = 0;
+        if (exists)
         {
-            Logger::instance().logInfo(
-                QString("  %1 (exists, size: %2 bytes)")
-                    .arg(file->path())
-                    .arg(file->size()));
+            size = info.size();
         }
-        else
-        {
-            Logger::instance().logInfo(
-                QString("  %1 (does not exist)")
-                    .arg(file->path()));
-        }
+        result.append({ file->path(), exists, size });
     }
+    return result;
 }
 
 void FileManager::startTracking()
 {
-    if (m_files.isEmpty())
+    if (!m_refresher)
+    {
+        Logger::instance().logError("Cannot start tracking: refresher not initialized");
+        return;
+    }
+
+    if (m_files.empty())
     {
         Logger::instance().logError("No files to track. Add files first.");
         return;
     }
 
-    if (m_tracking)
+    if (m_refresher->isRunning())
     {
         Logger::instance().logError("Tracking already running");
         return;
     }
-
-    m_timer->start();
-    m_tracking = true;
-
-    Logger::instance().logInfo(
-        "Tracking started for " + QString::number(m_files.size()) + " files");
+    m_refresher->start();
+    Logger::instance().logInfo("Tracking started for " + QString::number(m_files.size()) + " files");
 }
 
 void FileManager::stopTracking()
 {
-    if (!m_tracking)
+    if (!m_refresher)
+    {
+        Logger::instance().logError("Internal error: refresher is not initialized");
+        return;
+    }
+    if (!m_refresher->isRunning())
     {
         Logger::instance().logError("Tracking is not running");
         return;
     }
-
-    m_timer->stop();
-    m_tracking = false;
-
+    m_refresher->stop();
     Logger::instance().logInfo("Tracking stopped");
 }
 
 void FileManager::checkAllFiles()
 {
-    for (int i = 0; i < m_files.size(); ++i)
+    for (std::size_t i = 0; i < m_files.size(); ++i)
     {
-        m_files[i]->checkForChanges();
+        TrackedFile &file = *m_files[i];
+
+        bool oldExists = file.exists();
+        qint64 oldSize = file.size();
+
+        QFileInfo info(file.path());
+        bool newExists = info.exists() && info.isFile();
+        qint64 newSize = 0;
+
+        if (newExists)
+        {
+            newSize = info.size();
+        }
+
+        if (!oldExists && newExists)
+        {
+            file.setState(newExists, newSize);
+            emit fileExists(file.path(), newSize);
+            continue;
+        }
+
+        if (oldExists && !newExists)
+        {
+            file.setState(newExists, newSize);
+            emit fileNotExists(file.path());
+            continue;
+        }
+
+        if (oldExists && newExists && oldSize != newSize)
+        {
+            file.setState(newExists, newSize);
+            emit fileModified(file.path(), newSize);
+            continue;
+        }
     }
 }
 
 void FileManager::shutdown()
 {
-    if (m_tracking)
+    if (m_isShutdown) return;
+
+    if (m_refresher && m_refresher->isRunning())
     {
-        m_timer->stop();
-        m_tracking = false;
+        m_refresher->stop();
     }
+    m_files.clear();
+    m_isShutdown = true;
 }
 
-void FileManager::onFileCreated(const QString &path, qint64 size)
+
+void FileManager::onFileExists(const QString &path, qint64 size)
 {
-    QString message;
-    if (size == 0)
-    {
-        message = QString("File exists: %1, size: %2 bytes (empty)").arg(path).arg(size);
-    }
-    else
-    {
-        message = QString("File exists: %1, size: %2 bytes").arg(path).arg(size);
-    }
-    Logger::instance().logEvent(message);
+    Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));
 }
 
 void FileManager::onFileModified(const QString &path, qint64 size)
 {
-    QString message = QString("File changed: %1, new size: %2 bytes").arg(path).arg(size);
-    Logger::instance().logEvent(message);
-
-    QString existsMsg = QString("File exists: %1, size: %2 bytes").arg(path).arg(size);
-    Logger::instance().logEvent(existsMsg);
+    Logger::instance().logEvent(QString("File modified: %1, size: %2 bytes").arg(path).arg(size));
 }
 
 void FileManager::onFileNotExists(const QString &path)
 {
-    QString message = QString("File does not exist: %1").arg(path);
-    Logger::instance().logEvent(message);
+    Logger::instance().logEvent(QString("File does not exist: %1").arg(path));
 }

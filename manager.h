@@ -2,17 +2,26 @@
 #define FILEMANAGER_H
 
 #include <QObject>
-#include <QVector>
-#include <QTimer>
-#include "fileentity.h"
+#include <vector>
+#include <memory>
+#include "IRefresher.h"
+#include "trackedfile.h"
+
+struct FileInfo
+{
+    QString path;
+    bool exists;
+    qint64 size;
+};
 
 class FileManager : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit FileManager(QObject *parent = nullptr);
-    ~FileManager();
+    static FileManager& instance();
+    FileManager(const FileManager&) = delete;
+    FileManager& operator=(const FileManager&) = delete;
 
 public slots:
     void addFile(const QString &path);
@@ -20,18 +29,25 @@ public slots:
     void listFiles();
     void startTracking();
     void stopTracking();
-    void checkAllFiles();
-    void shutdown();
-
+    QVector<FileInfo> getFiles() const;
+signals:
+    void fileExists(const QString &path, qint64 size);
+    void fileModified(const QString &path, qint64 size);
+    void fileNotExists(const QString &path);
 private slots:
-    void onFileCreated(const QString &path, qint64 size);
+    void checkAllFiles();
+    void onFileExists(const QString &path, qint64 size);
     void onFileModified(const QString &path, qint64 size);
     void onFileNotExists(const QString &path);
+    void shutdown();
 
 private:
-    QVector<TrackedFile*> m_files;
-    QTimer *m_timer;
-    bool m_tracking;
+    explicit FileManager(QObject *parent = nullptr);
+    ~FileManager();
+    IRefresher *m_refresher;
+    QString normalizePath(const QString &path) const;
+    std::vector<std::unique_ptr<TrackedFile>> m_files;
+    bool m_isShutdown = false;
 };
 
 #endif // FILEMANAGER_H
