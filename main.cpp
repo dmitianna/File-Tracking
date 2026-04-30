@@ -58,7 +58,6 @@ void handleCommand(const QString &input)
     else if (command == "stop") manager.stopTracking();
     else if (command == "exit")
     {
-        manager.shutdown();
         QCoreApplication::quit();
     }
     else

@@ -7,13 +7,19 @@
 #include "IRefresher.h"
 #include "trackedfile.h"
 
+struct FileInfo
+{
+    QString path;
+    bool exists;
+    qint64 size;
+};
+
 class FileManager : public QObject
 {
     Q_OBJECT
 
 public:
     static FileManager& instance();
-
     FileManager(const FileManager&) = delete;
     FileManager& operator=(const FileManager&) = delete;
 
@@ -23,7 +29,7 @@ public slots:
     void listFiles();
     void startTracking();
     void stopTracking();
-    void shutdown();
+    QVector<FileInfo> getFiles() const;
 signals:
     void fileExists(const QString &path, qint64 size);
     void fileModified(const QString &path, qint64 size);
@@ -33,6 +39,7 @@ private slots:
     void onFileExists(const QString &path, qint64 size);
     void onFileModified(const QString &path, qint64 size);
     void onFileNotExists(const QString &path);
+    void shutdown();
 
 private:
     explicit FileManager(QObject *parent = nullptr);
