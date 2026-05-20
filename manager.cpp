@@ -25,7 +25,6 @@ FileManager::FileManager(QObject *parent): QObject(parent), m_refresher(nullptr)
 FileManager::~FileManager()
 {
     shutdown();
-    Logger::instance().logInfo("FileManger is shutdown");
 }
 
 FileManager& FileManager::instance()
@@ -270,7 +269,7 @@ void FileManager::processCommand(const QString& input)
 
     if (command == "add") addFile(argument);
     else if (command == "remove") removeFile(argument);
-    //else if (command == "list") listFiles();
+    else if (command == "list") Logger::instance().logFileList(getFiles());
     else if (command == "start") startTracking();
     else if (command == "stop") stopTracking();
     else if (command == "exit")

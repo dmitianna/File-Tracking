@@ -1,4 +1,8 @@
 #include "logger.h"
+#include <QMutexLocker>
+Logger::Logger(): m_consoleStream(stdout)
+{
+}
 
 Logger& Logger::instance()
 {

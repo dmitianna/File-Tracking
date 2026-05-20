@@ -17,7 +17,7 @@ public:
     void logEvent(const QString &message);
 
 private:
-    Logger() = default;
+    Logger();
     ~Logger() = default;
     QTextStream m_consoleStream;
     QMutex m_mutex;

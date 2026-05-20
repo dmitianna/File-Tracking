@@ -26,7 +26,6 @@ public:
 public slots:
     void addFile(const QString &path);
     void removeFile(const QString &path);
-    //void listFiles();
     void startTracking();
     void stopTracking();
     QVector<FileInfo> getFiles() const;
