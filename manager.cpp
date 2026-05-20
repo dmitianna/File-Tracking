@@ -238,7 +238,50 @@ void FileManager::shutdown()
     m_isShutdown = true;
 }
 
+void FileManager::processCommand(const QString& input)
+{
+    QString line = input.trimmed();
 
+    if (line.isEmpty())
+    {
+        return;
+    }
+
+    QStringList parts = line.split(' ', Qt::SkipEmptyParts);
+    QString command = parts[0].toLower();
+
+    QString argument;
+
+    if ((command == "list" || command == "start" || command == "stop" || command == "exit") && parts.size() > 1)
+    {
+        Logger::instance().logError("Too many arguments for command: " + command);
+        return;
+    }
+
+    if ((command == "add" || command == "remove") && parts.size() != 2)
+    {
+        Logger::instance().logError("Invalid number of arguments for command: " + command);
+        Logger::instance().logError("Usage: add/remove <path>");
+        return;
+    }
+
+    if (command == "add" || command == "remove")
+        argument = parts[1];
+
+    if (command == "add") addFile(argument);
+    else if (command == "remove") removeFile(argument);
+    //else if (command == "list") listFiles();
+    else if (command == "start") startTracking();
+    else if (command == "stop") stopTracking();
+    else if (command == "exit")
+    {
+        emit shutdownRequested();
+    }
+    else
+    {
+        Logger::instance().logError("Unknown command: " + command);
+    }
+}
 void FileManager::onFileExists(const QString &path, qint64 size)
 {
     Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));

@@ -26,14 +26,16 @@ public:
 public slots:
     void addFile(const QString &path);
     void removeFile(const QString &path);
-    void listFiles();
+    //void listFiles();
     void startTracking();
     void stopTracking();
     QVector<FileInfo> getFiles() const;
+    void processCommand(const QString& input);
 signals:
     void fileExists(const QString &path, qint64 size);
     void fileModified(const QString &path, qint64 size);
     void fileNotExists(const QString &path);
+    void shutdownRequested();
 private slots:
     void checkAllFiles();
     void onFileExists(const QString &path, qint64 size);

@@ -1,11 +1,9 @@
 #include <QTextStream>
 #include <QCoreApplication>
 
-#include <atomic>
-#include <thread>
-
 #include "manager.h"
 #include "logger.h"
+#include "inputthread.h"
 
 static void printHelp()
 {
@@ -22,7 +20,7 @@ static void printHelp()
     cout << "Note: paths with spaces are not supported\n\n";
     cout.flush();
 }
-
+/*
 void handleCommand(const QString &input)
 {
     QString line = input.trimmed();
@@ -65,37 +63,19 @@ void handleCommand(const QString &input)
         Logger::instance().logError("Unknown command: " + command);
     }
 }
+*/
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     printHelp();
 
-    std::atomic_bool running = true;
-    std::thread consoleThread([&running]()
-    {
-    QTextStream cin(stdin);
+    FileManager& manager = FileManager::instance();
+    InputThread inputThread;
 
-    while (running)
-    {
-        QString line = cin.readLine();
-        // EOF (Ctrl+D / Ctrl+Z)
-        if (line.isNull()){
-            QMetaObject::invokeMethod(qApp,&QCoreApplication::quit,Qt::QueuedConnection);
-            running = false;
-            break;
-        }
+    QObject::connect(&inputThread,&InputThread::commandReceived,&manager,&FileManager::processCommand);
+    QObject::connect(&manager,&FileManager::shutdownRequested,&app,&QCoreApplication::quit);
 
-        QString cmd = line.trimmed().toLower();
-        QMetaObject::invokeMethod(qApp,[line](){handleCommand(line);},Qt::QueuedConnection);
+    inputThread.start();
 
-        if (cmd == "exit") running = false;
-    }
-    });
-
-    int result = app.exec();
-
-    running = false;
-
-    if (consoleThread.joinable()) consoleThread.join();
-    return result;
+    return app.exec();
 }
