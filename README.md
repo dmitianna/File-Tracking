@@ -206,6 +206,7 @@ ERROR: Usage: add/remove <path>
 EVENT: File added: test.txt  
 EVENT: File exists: test.txt, size: N bytes  
 INFO: Tracking started for 1 files  
+INFO: Tracking stopped  
 
 
 ### Тест 9. добавление существующего файла
