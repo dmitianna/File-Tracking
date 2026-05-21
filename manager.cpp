@@ -77,7 +77,7 @@ void FileManager::addFile(const QString &path)
     {
         if (m_files[i] && (m_files[i]->path() == normalizedPath))
         {
-            Logger::instance().logEvent("File already tracked: " + normalizedPath);
+            Logger::instance().logInfo("File already tracked: " + normalizedPath);
             return;
         }
     }
@@ -124,7 +124,7 @@ void FileManager::removeFile(const QString &path)
         }
     }
 
-    Logger::instance().logError("File not found: " + normalizedPath);
+    Logger::instance().logError("File is not found in the list: " + normalizedPath);
 }
 
 QVector<FileInfo> FileManager::getFiles() const
@@ -261,7 +261,7 @@ void FileManager::processCommand(const QString& input)
     if ((command == "add" || command == "remove") && parts.size() != 2)
     {
         Logger::instance().logError("Invalid number of arguments for command: " + command);
-        Logger::instance().logError("Usage: add/remove <path>");
+        Logger::instance().logInfo("Usage: add/remove <path>");
         return;
     }
 
