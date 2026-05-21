@@ -22,13 +22,12 @@ public:
     static FileManager& instance();
     FileManager(const FileManager&) = delete;
     FileManager& operator=(const FileManager&) = delete;
-
+    QVector<FileInfo> getFiles() const;
 public slots:
     void addFile(const QString &path);
     void removeFile(const QString &path);
     void startTracking();
     void stopTracking();
-    QVector<FileInfo> getFiles() const;
     void processCommand(const QString& input);
 signals:
     void fileExists(const QString &path, qint64 size);
@@ -40,7 +39,6 @@ private slots:
     void onFileExists(const QString &path, qint64 size);
     void onFileModified(const QString &path, qint64 size);
     void onFileNotExists(const QString &path);
-    void shutdown();
 
 private:
     explicit FileManager(QObject *parent = nullptr);
@@ -49,6 +47,7 @@ private:
     QString normalizePath(const QString &path) const;
     std::vector<std::unique_ptr<TrackedFile>> m_files;
     bool m_isShutdown = false;
+    void shutdown();
 };
 
 #endif // FILEMANAGER_H
