@@ -184,7 +184,7 @@ ERROR: Too many arguments for command: list
 
 **Вывод программы:**  
 ERROR: Invalid number of arguments for command: add
-ERROR: Usage: add/remove <path>
+INFO: Usage: add/remove <path>
 
 
 ### Тест 7. несколько аргументов
@@ -193,7 +193,7 @@ ERROR: Usage: add/remove <path>
 
 **Вывод программы:**  
 ERROR: Invalid number of arguments for command: add
-ERROR: Usage: add/remove <path>
+INFO: Usage: add/remove <path>
 
 
 ### Тест 8. exit
@@ -320,7 +320,7 @@ INFO:   test2.txt (exists, size: N bytes)
 2. Ввести команду `add test.txt`
 
 **Вывод программы:**  
-EVENT: File already tracked: test.txt  
+INFO: File already tracked: test.txt  
 
 
 ### Тест 20. удаление несуществующего
@@ -328,7 +328,7 @@ EVENT: File already tracked: test.txt
 1. Ввести команду `remove test.txt`
 
 **Вывод программы:**  
-ERROR: File not found: test.txt  
+ERROR: File not found in the list: test.txt  
 
 
 ### Тест 21. путь к папке
@@ -434,7 +434,7 @@ EVENT: File exists: test.txt, size: N bytes
 4. Ввести команду `remove test1.txt`
 
 **Вывод программы:**  
-EVENT: File removed: test1.txt  
+INFO: File removed: test1.txt  
 
 
 ### Тест 31. переименование файла
@@ -446,6 +446,7 @@ EVENT: File removed: test1.txt
 
 **Вывод программы:**  
 EVENT: File does not exist: test1.txt  
+EVENT: File exists: test1.txt, size: N bytes  
 
 
 ### Тест 32. автоостановка при удалении всех файлов из списка отслеживаемых
@@ -456,5 +457,5 @@ EVENT: File does not exist: test1.txt
 3. Ввести команду `remove test.txt`
 
 **Вывод программы:**  
-EVENT: File removed: test.txt   
+INFO: File removed: test.txt   
 INFO: Tracking stopped  
