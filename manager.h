@@ -6,13 +6,7 @@
 #include <memory>
 #include "IRefresher.h"
 #include "trackedfile.h"
-
-struct FileInfo
-{
-    QString path;
-    bool exists;
-    qint64 size;
-};
+#include "fileinfo.h"
 
 class FileManager : public QObject
 {

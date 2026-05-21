@@ -3,7 +3,7 @@
 
 #include <QTextStream>
 #include <QMutex>
-#include "manager.h"
+#include "fileinfo.h"
 
 class Logger
 {
