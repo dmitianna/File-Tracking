@@ -20,11 +20,11 @@ FileManager::FileManager(QObject *parent): QObject(parent), m_refresher(nullptr)
     connect(this, &FileManager::fileExists,this, &FileManager::onFileExists);
     connect(this, &FileManager::fileModified,this, &FileManager::onFileModified);
     connect(this, &FileManager::fileNotExists,this, &FileManager::onFileNotExists);
+    connect(this,&FileManager::shutdownRequested,this,&FileManager::shutdown);
 }
 
 FileManager::~FileManager()
 {
-    shutdown();
 }
 
 FileManager& FileManager::instance()
@@ -232,6 +232,7 @@ void FileManager::shutdown()
     if (m_refresher && m_refresher->isRunning())
     {
         m_refresher->stop();
+        Logger::instance().logInfo("Tracking stopped");
     }
     m_files.clear();
     m_isShutdown = true;
