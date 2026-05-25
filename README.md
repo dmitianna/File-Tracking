@@ -29,8 +29,8 @@
 ---
 
 ## 3. Архитектура 
-![UML Диаграмма](images/diagramuml.png)
-![Диаграмма слотов и сигналов](images/slotssignal.png)<br>
+![UML Диаграмма](images/umldiagram.png)
+![Диаграмма слотов и сигналов](images/sigdiagram.png)<br>
 Система состоит из следующих компонентов:
 
 
