@@ -3,24 +3,28 @@
 #include "timerefresher.h"
 #include <QDir>
 
-FileManager::FileManager(QObject *parent): QObject(parent)
+FileManager::FileManager(QObject *parent): QObject(parent), m_refresher(nullptr)
 {
     //Logger::instance().logInfo("FileManager created");
-
     TimeRefresher *refresher = new TimeRefresher(this);
-    refresher->setInterval(100);
-    connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
-    m_refresher = refresher;
-
-
+    if (!refresher)
+    {
+        Logger::instance().logError("Refresher is not available. Tracking disabled.");
+    }
+    else
+    {
+        refresher->setInterval(100);
+        connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
+        m_refresher = refresher;
+    }
     connect(this, &FileManager::fileExists,this, &FileManager::onFileExists);
     connect(this, &FileManager::fileModified,this, &FileManager::onFileModified);
     connect(this, &FileManager::fileNotExists,this, &FileManager::onFileNotExists);
+    connect(this,&FileManager::shutdownRequested,this,&FileManager::shutdown);
 }
 
 FileManager::~FileManager()
 {
-    shutdown();
 }
 
 FileManager& FileManager::instance()
@@ -50,6 +54,11 @@ QString FileManager::normalizePath(const QString &path) const
 
 void FileManager::addFile(const QString &path)
 {
+    if (!m_refresher)
+    {
+        Logger::instance().logError("Tracking functionality is not available.");
+        return;
+    }
     QString normalizedPath = normalizePath(path);
     if(normalizedPath.isEmpty())
     {
@@ -68,11 +77,11 @@ void FileManager::addFile(const QString &path)
     {
         if (m_files[i] && (m_files[i]->path() == normalizedPath))
         {
-            Logger::instance().logEvent("File already tracked: " + normalizedPath);
+            Logger::instance().logInfo("File already tracked: " + normalizedPath);
             return;
         }
     }
-    auto file = std::make_unique<TrackedFile>(normalizedPath);
+    std::unique_ptr<TrackedFile> file(new TrackedFile(normalizedPath));
     bool exists = info.exists() && info.isFile();
     qint64 size = 0;
 
@@ -106,7 +115,7 @@ void FileManager::removeFile(const QString &path)
             m_files.erase(it);
             Logger::instance().logEvent("File removed: " + normalizedPath);
 
-            if (m_files.empty() && m_refresher->isRunning())
+            if (m_files.empty() && m_refresher && m_refresher->isRunning())
             {
                 stopTracking();
             }
@@ -115,35 +124,35 @@ void FileManager::removeFile(const QString &path)
         }
     }
 
-    Logger::instance().logError("File not found: " + normalizedPath);
+    Logger::instance().logError("File is not found in the list: " + normalizedPath);
 }
 
-void FileManager::listFiles()
+QVector<FileInfo> FileManager::getFiles() const
 {
-    if (m_files.empty())
+    QVector<FileInfo> result;
+    for (const auto& file : m_files)
     {
-        Logger::instance().logInfo("No files being tracked");
-        return;
-    }
-    Logger::instance().logInfo("Tracked files (" + QString::number(m_files.size()) + "):");
+        QFileInfo info(file->path());
 
-    for (std::size_t i = 0; i < m_files.size(); ++i)
-    {
-        QFileInfo info(m_files[i]->path());
         bool exists = info.exists() && info.isFile();
+        qint64 size = 0;
         if (exists)
         {
-            Logger::instance().logInfo(QString("  %1 (exists, size: %2 bytes)").arg(m_files[i]->path()).arg(info.size()));
+            size = info.size();
         }
-        else
-        {
-            Logger::instance().logInfo(QString("  %1 (does not exist)").arg(m_files[i]->path()));
-        }
+        result.append({ file->path(), exists, size });
     }
+    return result;
 }
 
 void FileManager::startTracking()
 {
+    if (!m_refresher)
+    {
+        Logger::instance().logError("Cannot start tracking: refresher not initialized");
+        return;
+    }
+
     if (m_files.empty())
     {
         Logger::instance().logError("No files to track. Add files first.");
@@ -161,6 +170,11 @@ void FileManager::startTracking()
 
 void FileManager::stopTracking()
 {
+    if (!m_refresher)
+    {
+        Logger::instance().logError("Internal error: refresher is not initialized");
+        return;
+    }
     if (!m_refresher->isRunning())
     {
         Logger::instance().logError("Tracking is not running");
@@ -208,11 +222,6 @@ void FileManager::checkAllFiles()
             emit fileModified(file.path(), newSize);
             continue;
         }
-
-        if (oldExists != newExists || oldSize != newSize)
-        {
-            file.setState(newExists, newSize);
-        }
     }
 }
 
@@ -223,13 +232,56 @@ void FileManager::shutdown()
     if (m_refresher && m_refresher->isRunning())
     {
         m_refresher->stop();
+        Logger::instance().logInfo("Tracking stopped");
     }
-
     m_files.clear();
     m_isShutdown = true;
 }
 
+void FileManager::processCommand(const QString& input)
+{
+    QString line = input.trimmed();
 
+    if (line.isEmpty())
+    {
+        return;
+    }
+
+    QStringList parts = line.split(' ', Qt::SkipEmptyParts);
+    QString command = parts[0].toLower();
+
+    QString argument;
+
+    if ((command == "list" || command == "start" || command == "stop" || command == "exit") && parts.size() > 1)
+    {
+        Logger::instance().logError("Too many arguments for command: " + command);
+        return;
+    }
+
+    if ((command == "add" || command == "remove") && parts.size() != 2)
+    {
+        Logger::instance().logError("Invalid number of arguments for command: " + command);
+        Logger::instance().logInfo("Usage: add/remove <path>");
+        return;
+    }
+
+    if (command == "add" || command == "remove")
+        argument = parts[1];
+
+    if (command == "add") addFile(argument);
+    else if (command == "remove") removeFile(argument);
+    else if (command == "list") Logger::instance().logFileList(getFiles());
+    else if (command == "start") startTracking();
+    else if (command == "stop") stopTracking();
+    else if (command == "exit")
+    {
+        emit shutdownRequested();
+    }
+    else
+    {
+        Logger::instance().logError("Unknown command: " + command);
+    }
+}
 void FileManager::onFileExists(const QString &path, qint64 size)
 {
     Logger::instance().logEvent(QString("File exists: %1, size: %2 bytes").arg(path).arg(size));

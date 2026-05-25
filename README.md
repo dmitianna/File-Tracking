@@ -22,67 +22,127 @@
 Основные идеи:
 - каждый файл представлен отдельным объектом;
 - изменения состояния определяются путем периодического опроса;
-- взаимодействие между компонентами реализовано через механизм сигналов и слотов;
-- управление системой централизовано через менеджер.
+- взаимодействие между компонентами реализовано через механизм сигналов и слотов Qt;
+- пользовательский ввод выполняется в отдельном потоке;
+- управление системой централизовано через менеджер;
 
 ---
 
-## Архитектура 
-![UML Диаграмма](images/diagramuml.png)
-![Диаграмма слотов и сигналов](images/slotssignal.png)<br>
+## 3. Архитектура 
+![UML Диаграмма](images/umldiagram.png)
+![Диаграмма слотов и сигналов](images/sigdiagram.png)<br>
 Система состоит из следующих компонентов:
 
-### 1. FileManager
-Центральный управляющий класс.
+
+## 3.1 FileManager
+
+Центральный управляющий класс системы.
 
 Функции:
-- хранение списка файлов;
+- хранение списка отслеживаемых файлов;
 - добавление и удаление файлов;
 - запуск и остановка слежения;
-- обработка событий от файлов.
-
----
-
-### 2. TrackedFile
-Класс, представляющий один отслеживаемый файл.
-
-Функции:
-- хранение состояния файла (существование, размер);
-- проверка изменений;
-- генерация событий при изменении состояния.
-
----
-
-### 3. Logger
-Класс для вывода сообщений.
+- обработка команд пользователя;
+- обработка событий изменения файлов.
 
 Особенности:
 - реализован как Singleton;
-- использует QMutex;
-- уровни логирования:
+- использует интерфейс `IRefresher`;
+- управляет жизненным циклом объектов файлов.
+
+---
+
+## 3.2 TrackedFile
+
+Класс, представляющий один отслеживаемый файл.
+
+Функции:
+- хранение состояния файла;
+- хранение пути к файлу;
+- хранение информации о существовании файла;
+- хранение размера файла;
+- обновление состояния файла.
+
+---
+
+## 3.3 Logger
+
+Класс для вывода сообщений в консоль.
+
+Особенности:
+- реализован как Singleton;
+- использует `QMutex`;
+- поддерживает уровни логирования:
   - INFO
   - ERROR
   - EVENT
 
 ---
 
-### 4. main.cpp
-Точка входа программы.
+## 3.4 InputThread
+
+Класс для асинхронного чтения пользовательского ввода.
 
 Функции:
-- обработка пользовательского ввода;
-- парсинг команд;
-- вызов методов FileManager.
+- чтение команд из консоли в отдельном потоке;
+- передача команд через сигналы Qt;
+- предотвращение блокировки основного event loop.
 
 ---
 
-# Тест-кейсы
+## 3.5 IRefresher
+
+Абстрактный интерфейс механизма обновления состояния файлов.
+
+Функции:
+- запуск обновления;
+- остановка обновления;
+- проверка состояния обновления.
+
+Интерфейс позволяет заменить механизм обновления без изменения `FileManager`.
+
+---
+
+## 3.6 TimeRefresher
+
+Реализация интерфейса `IRefresher` на основе `QTimer`.
+
+Функции:
+- генерация периодических сигналов обновления;
+- настройка интервала обновления;
+
+---
+
+# 4. Поддерживаемые команды
+
+| Команда | Описание |
+|---|---|
+| `add <path>` | добавить файл в список отслеживания |
+| `remove <path>` | удалить файл из списка отслеживания |
+| `list` | показать список отслеживаемых файлов |
+| `start` | начать слежение |
+| `stop` | остановить слежение |
+| `exit` | завершить программу |
+
+---
+
+# 5. Особенности и ограничения реализации
+
+- пути нормализуются перед обработкой;
+- директории не могут быть добавлены в список отслеживания;
+- пути с пробелами не поддерживаются;
+- изменение файла определяется по изменению размера;
+- изменение содержимого без изменения размера не считается изменением;
+- при удалении всех файлов из списка слежение автоматически останавливается;
+
+
+# 6 Тест-кейсы
 
 ### Тест 1. list при пустом списке
 **Шаги:**
 1. Ввести команду `list`
 
-**Вывод программы:**
+**Вывод программы:**  
 INFO: No files being tracked
 
 
@@ -90,15 +150,15 @@ INFO: No files being tracked
 **Шаги:**
 1. Ввести команду `start`
 
-**Вывод программы:**
+**Вывод программы:**  
 ERROR: No files to track. Add files first.
 
 
 ### Тест 3. stop, когда слежение не запущено
-**Шаги:**
+**Шаги:**  
 1. Ввести команду `stop`
 
-**Вывод программы:**
+**Вывод программы:**  
 ERROR: Tracking is not running
 
 
@@ -106,7 +166,7 @@ ERROR: Tracking is not running
 **Шаги:**
 1. Ввести команду `abc`
 
-**Вывод программы:**
+**Вывод программы:**  
 ERROR: Unknown command: abc
 
 
@@ -114,7 +174,7 @@ ERROR: Unknown command: abc
 **Шаги:**
 1. Ввести команду `list test.txt`
 
-**Вывод программы:**
+**Вывод программы:**  
 ERROR: Too many arguments for command: list
 
 
@@ -122,18 +182,18 @@ ERROR: Too many arguments for command: list
 **Шаги:**
 1. Ввести команду `add`
 
-**Вывод программы:**
+**Вывод программы:**  
 ERROR: Invalid number of arguments for command: add
-ERROR: Usage: add/remove <path>
+INFO: Usage: add/remove <path>
 
 
 ### Тест 7. несколько аргументов
 **Шаги:**
 1. Ввести команду `add file1 file2`
 
-**Вывод программы:**
+**Вывод программы:**  
 ERROR: Invalid number of arguments for command: add
-ERROR: Usage: add/remove <path>
+INFO: Usage: add/remove <path>
 
 
 ### Тест 8. exit
@@ -142,17 +202,18 @@ ERROR: Usage: add/remove <path>
 2. Ввести команду `start`
 3. Ввести команду `exit`
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File added: test.txt  
 EVENT: File exists: test.txt, size: N bytes  
 INFO: Tracking started for 1 files  
+INFO: Tracking stopped  
 
 
 ### Тест 9. добавление существующего файла
 **Шаги:**
 1. Ввести команду `add test.txt`
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File added: test.txt  
 EVENT: File exists: test.txt, size: N bytes  
 
@@ -162,7 +223,7 @@ EVENT: File exists: test.txt, size: N bytes
 1. Ввести команду `add test.txt`
 2. Ввести команду `list`
 
-**Вывод программы:**
+**Вывод программы:**  
 INFO: Tracked files (1):  
 INFO:   test.txt (exists, size: N bytes)
 
@@ -171,7 +232,7 @@ INFO:   test.txt (exists, size: N bytes)
 1. Ввести команду `add test.txt`
 2. Ввести команду `start`
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File added: test.txt  
 EVENT: File exists: test.txt, size: N bytes 
 INFO: Tracking started for 1 files
@@ -183,7 +244,7 @@ INFO: Tracking started for 1 files
 2. Ввести команду `start`
 3. Изменить файл `test.txt`
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File modified: test.txt, size: N bytes
 
 
@@ -193,7 +254,7 @@ EVENT: File modified: test.txt, size: N bytes
 2. Ввести команду `start`
 3. Удалить файл `test.txt`
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File does not exist: test.txt
 
 
@@ -204,7 +265,7 @@ EVENT: File does not exist: test.txt
 3. Удалить файл `test.txt`
 4. Создать файл `test.txt` заново
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File does not exist: test.txt  
 EVENT: File exists: test.txt, size: N bytes  
 
@@ -215,7 +276,7 @@ EVENT: File exists: test.txt, size: N bytes
 2. Ввести команду `start`
 3. Ввести команду `stop`
 
-**Вывод программы:**
+**Вывод программы:**  
 INFO: Tracking started for 1 files  
 INFO: Tracking stopped  
 
@@ -227,8 +288,8 @@ INFO: Tracking stopped
 3. Ввести команду `start`
 4. Изменить файл `test1.txt`
 
-**Вывод программы:**
-EVENT: File modified: test1.txt, size: N bytes  
+**Вывод программы:**  
+EVENT: File modified: test1.txt, size: N bytes   
 
 ### Тест 17. удаление одного файла
 **Шаги:**
@@ -237,8 +298,8 @@ EVENT: File modified: test1.txt, size: N bytes
 3. Ввести команду `start`
 4. Удалить файл `test2.txt`
 
-**Вывод программы:**
-EVENT: File does not exist: test2.txt
+**Вывод программы:**  
+EVENT: File does not exist: test2.txt  
 
 
 ### Тест 18. list с несколькими файлами
@@ -247,7 +308,7 @@ EVENT: File does not exist: test2.txt
 2. Ввести команду `add test2.txt`
 3. Ввести команду `list`
 
-**Вывод программы:**
+**Вывод программы:**  
 INFO: Tracked files (2):  
 INFO:   test1.txt (exists, size: N bytes)  
 INFO:   test2.txt (exists, size: N bytes)  
@@ -258,49 +319,49 @@ INFO:   test2.txt (exists, size: N bytes)
 1. Ввести команду `add test.txt`
 2. Ввести команду `add test.txt`
 
-**Вывод программы:**
-EVENT: File already tracked: test.txt
+**Вывод программы:**  
+INFO: File already tracked: test.txt  
 
 
 ### Тест 20. удаление несуществующего
 **Шаги:**
 1. Ввести команду `remove test.txt`
 
-**Вывод программы:**
-ERROR: File not found: test.txt
+**Вывод программы:**  
+ERROR: File not found in the list: test.txt  
 
 
 ### Тест 21. путь к папке
 **Шаги:**
 1. Ввести команду `add test_folder`
 
-**Вывод программы:**
-ERROR: The path is not a file: test_folder
+**Вывод программы:**  
+ERROR: The path is not a file: test_folder  
 
 
 ### Тест 22. пустой путь
 **Шаги:**
 1. Ввести команду `add "" `
 
-**Вывод программы:**
-ERROR: Empty path
+**Вывод программы:**  
+ERROR: Empty path  
 
 
 ### Тест 23. путь с пробелами
 **Шаги:**
 1. Ввести команду `add C:/My Folder.txt`
 
-**Вывод программы:**
-ERROR: Invalid number of arguments for command: add
+**Вывод программы:**  
+ERROR: Invalid number of arguments for command: add  
 
 
 ### Тест 24. несуществующий файл
 **Шаги:**
 1. Ввести команду `add nofile.txt`
 
-**Вывод программы:**
-EVENT: File added: nofile.txt  
-EVENT: File does not exist: nofile.txt  
+**Вывод программы:**  
+EVENT: File added: nofile.txt   
+EVENT: File does not exist: nofile.txt   
 
 
 ### Тест 25. повторный start
@@ -309,11 +370,11 @@ EVENT: File does not exist: nofile.txt
 2. Ввести команду `start`
 3. Ввести команду `start`
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File added: test.txt  
-EVENT: File exists: test.txt, size: N bytes 
-INFO: Tracking started for 1 files  
-ERROR: Tracking already running  
+EVENT: File exists: test.txt, size: N bytes  
+INFO: Tracking started for 1 files   
+ERROR: Tracking already running   
 
 ### Тест 26. повторный stop
 **Шаги:**
@@ -322,12 +383,12 @@ ERROR: Tracking already running
 3. Ввести команду `stop`
 4. Ввести команду `stop`
 
-**Вывод программы:**
+**Вывод программы:**  
 EVENT: File added: test.txt  
-EVENT: File exists: test.txt, size: N bytes 
-INFO: Tracking started for 1 files 
-INFO: Tracking stopped  
-ERROR: Tracking is not running  
+EVENT: File exists: test.txt, size: N bytes  
+INFO: Tracking started for 1 files   
+INFO: Tracking stopped    
+ERROR: Tracking is not running    
 
 
 ### Тест 27. файл становится пустым
@@ -336,11 +397,11 @@ ERROR: Tracking is not running
 2. Ввести команду `start`
 3. Очистить содержимое файла
 
-**Вывод программы:**
-EVENT: File added: test.txt  
-EVENT: File exists: test.txt, size: N bytes 
-INFO: Tracking started for 1 files 
-EVENT: File modified: test.txt, size: 0 bytes
+**Вывод программы:**  
+EVENT: File added: test.txt   
+EVENT: File exists: test.txt, size: N bytes   
+INFO: Tracking started for 1 files   
+EVENT: File modified: test.txt, size: 0 bytes  
 
 
 ### Тест 28. быстро удалить и создать
@@ -350,19 +411,19 @@ EVENT: File modified: test.txt, size: 0 bytes
 3. Удалить файл
 4. Сразу создать файл заново
 
-**Вывод программы:**
-EVENT: File does not exist: test.txt  
-EVENT: File exists: test.txt, size: N bytes  
+**Вывод программы:**  
+EVENT: File does not exist: test.txt   
+EVENT: File exists: test.txt, size: N bytes    
 
 
 ### Тест 29. изменение без изменения размера
 **Шаги:**
-1. Ввести команду `add test.txt`
+1. Ввести команду `add test.txt`  
 2. Ввести команду `start`
 3. Изменить содержимое файла без изменения размера
 
-**Вывод программы:**
-(сообщения отсутствуют)
+**Вывод программы:**  
+(сообщения отсутствуют)  
 
 
 ### Тест 30. remove одного из нескольких во время слежения
@@ -372,28 +433,29 @@ EVENT: File exists: test.txt, size: N bytes
 3. Ввести команду `start`
 4. Ввести команду `remove test1.txt`
 
-**Вывод программы:**
-EVENT: File removed: test1.txt
+**Вывод программы:**  
+INFO: File removed: test1.txt  
 
 
-### Тест 32. переименование файла
+### Тест 31. переименование файла
 **Шаги:**
 1. Ввести команду `add test1.txt`
 2. Ввести команду `start`
 3. Переименовать файл `test1.txt` в `test10.txt`
 4. Переименовать файл `test10.txt` в `test1.txt`
 
-**Вывод программы:**
-EVENT: File does not exist: test1.txt
+**Вывод программы:**  
+EVENT: File does not exist: test1.txt  
+EVENT: File exists: test1.txt, size: N bytes  
 
 
-### Тест 33. автоостановка при удалении всех файлов из списка отслеживаемых
+### Тест 32. автоостановка при удалении всех файлов из списка отслеживаемых
 
 **Шаги:**
 1. Ввести команду `add test.txt`
 2. Ввести команду `start`
 3. Ввести команду `remove test.txt`
 
-**Вывод программы:**
-EVENT: File removed: test.txt  
-INFO: Tracking stopped
+**Вывод программы:**  
+INFO: File removed: test.txt   
+INFO: Tracking stopped  
