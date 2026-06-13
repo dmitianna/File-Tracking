@@ -6,7 +6,7 @@
 FileManager::FileManager(QObject *parent): QObject(parent), m_refresher(nullptr)
 {
     //Logger::instance().logInfo("FileManager created");
-    TimeRefresher *refresher = new TimeRefresher(this);
+    IRefresher *refresher = new TimeRefresher(this);
     if (!refresher)
     {
         Logger::instance().logError("Refresher is not available. Tracking disabled.");
@@ -14,7 +14,7 @@ FileManager::FileManager(QObject *parent): QObject(parent), m_refresher(nullptr)
     else
     {
         refresher->setInterval(100);
-        connect(refresher, &TimeRefresher::refreshRequested,this, &FileManager::checkAllFiles);
+        connect(refresher, &IRefresher::refreshRequested,this, &FileManager::checkAllFiles);
         m_refresher = refresher;
     }
     connect(this, &FileManager::fileExists,this, &FileManager::onFileExists);

@@ -5,7 +5,7 @@
 #include <QTimer>
 #include "IRefresher.h"
 
-class TimeRefresher:public QObject, public IRefresher
+class TimeRefresher:public IRefresher
 {
     Q_OBJECT
 public:
@@ -15,11 +15,7 @@ public:
     void stop() override;
     bool isRunning() const override;
 
-    void setInterval(int ms);
-
-signals:
-    void refreshRequested();
-
+    void setInterval(int ms) override;
 private:
     QTimer m_timer;
 };
