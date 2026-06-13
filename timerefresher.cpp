@@ -1,6 +1,6 @@
 #include "timerefresher.h"
 
-TimeRefresher::TimeRefresher(QObject *parent): QObject(parent), m_timer(this)
+TimeRefresher::TimeRefresher(QObject *parent):  IRefresher(parent), m_timer(this)
 {
     connect(&m_timer, &QTimer::timeout,this, &TimeRefresher::refreshRequested);
 }
