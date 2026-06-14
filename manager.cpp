@@ -81,7 +81,7 @@ void FileManager::addFile(const QString &path)
             return;
         }
     }
-    std::unique_ptr<TrackedFile> file(new TrackedFile(normalizedPath));
+    auto file = std::make_unique<TrackedFile>(normalizedPath);
     bool exists = info.exists() && info.isFile();
     qint64 size = 0;
 
